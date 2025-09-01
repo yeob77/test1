@@ -1,0 +1,89 @@
+  :root { --bg:#111; --panel:#1b1b1b; --btn:#2a2a2a; --accent:#4ade80; --text:#eee; }
+  * { box-sizing: border-box; }
+  html, body { height:100%; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui, sans-serif; }
+  .app { display:grid; grid-template-columns: 320px 1fr; height:100vh; }
+  .sidebar { background:var(--panel); padding:12px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .toolbar { display:grid; grid-template-columns: repeat(6, 1fr); gap:8px; }
+  button, select, input[type="range"] { background:var(--btn); color:var(--text); border:1px solid #333; border-radius:10px; padding:8px; cursor:pointer; }
+  button.active { outline:2px solid var(--accent); }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .stage { position:relative; background:#fff; display:flex; align-items:center; justify-content:center; }
+  .stage-inner { position:relative; width:100%; height:100%; }
+  canvas { position:absolute; inset:0; width:100%; height:100%; touch-action:none; }
+  #base { z-index:1; }
+  #paint { z-index:2; }
+  .pbtn { min-width:44px; height:36px; display:grid; place-items:center; background:var(--btn); border:1px solid #333; border-radius:10px; cursor:pointer; padding:0 10px; }
+  .pbtn.active { outline:2px solid var(--accent); }
+  .status { font-size:12px; color:#bbb; }
+
+.template-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 10px;
+  padding: 5px;
+  border: 1px solid #333;
+  border-radius: 10px;
+  max-height: 300px; /* Limit height and make it scrollable */
+  overflow-y: auto;
+}
+
+.template-item {
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 5px;
+  padding: 5px;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+}
+
+.template-item.active {
+  outline: 2px solid var(--accent);
+}
+
+.template-item img {
+  max-width: 100%;
+  max-height: 60px;
+  object-fit: contain;
+  margin-bottom: 5px;
+}
+
+.template-item span {
+  font-size: 0.75em;
+  word-break: break-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.template-item .delete-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: rgba(255, 0, 0, 0.7);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 0.8em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  opacity: 0; /* Hidden by default */
+  transition: opacity 0.2s;
+}
+
+.template-item:hover .delete-btn {
+  opacity: 1; /* Show on hover */
+}
