@@ -874,6 +874,38 @@
     });
   }
 
+  const TEMPLATE_CATEGORIES = [
+    { id: 'all', label: '모두', icon: '🌐' },
+    { id: 'uncategorized', label: '미분류', icon: '❓' },
+    { id: 'animals', label: '동물', icon: '🐾' },
+    { id: 'nature', label: '자연', icon: '🌳' },
+    { id: 'objects', label: '사물', icon: '💡' },
+    { id: 'abstract', label: '추상', icon: '🌀' }
+  ];
+
+  function buildCategoryButtons() {
+    el.templateCategoryButtons.innerHTML = '';
+    TEMPLATE_CATEGORIES.forEach(cat => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pbtn'; // Use pbtn for styling
+      btn.textContent = cat.icon; // Child-friendly icon
+      btn.title = cat.label; // Adult-friendly tooltip
+      btn.dataset.categoryId = cat.id;
+      btn.classList.toggle('active', state.currentCategory === cat.id);
+      btn.onclick = () => {
+        state.currentCategory = cat.id;
+        state.currentPage = 1; // Reset to first page when category changes
+        renderTemplateGallery();
+        // Update active class for category buttons
+        el.templateCategoryButtons.querySelectorAll('.pbtn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        setStatus(`카테고리: ${cat.label}`);
+      };
+      el.templateCategoryButtons.appendChild(btn);
+    });
+  }
+
   async function renderTemplateGallery() {
     el.templateGallery.innerHTML = '';
     try {
