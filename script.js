@@ -65,7 +65,7 @@
   const bctx = base.getContext('2d', { willReadFrequently: true });
   const pctx = paint.getContext('2d', { willReadFrequently: true });
 
-  const ids = ['clearPaintBtn', 'wipeAllBtn', 'saveBtn', 'loadBtn', 'downloadBtn', 'size', 'color', 'toolBrush', 'toolBucket', 'toolEraser', 'toolPan', 'zoomInBtn', 'zoomOutBtn', 'resetViewBtn', 'undoBtn', 'redoBtn', 'resetBtn', 'tplFile', 'tplImportBtn', 'templateSelect', 'changeTemplateBtn', 'brushBar', 'patternBar', 'bucketPattern', 'templateGallery'];
+  const ids = ['clearPaintBtn', 'wipeAllBtn', 'saveBtn', 'loadBtn', 'downloadBtn', 'size', 'color', 'toolBrush', 'toolBucket', 'toolEraser', 'toolPan', 'zoomInBtn', 'zoomOutBtn', 'resetViewBtn', 'undoBtn', 'redoBtn', 'resetBtn', 'tplFile', 'tplImportBtn', 'templateSelect', 'changeTemplateBtn', 'brushBar', 'patternBar', 'bucketPattern', 'templateGallery', 'modeToggleBtn', 'childColorPalette'];
   const el = {};
   ids.forEach(i => el[i] = $(i));
 
@@ -87,7 +87,8 @@
     panY: 0,
     undo: [],
     redo: [],
-    maxUndo: 25
+    maxUndo: 25,
+    isChildMode: false
   };
 
   function setStatus(t) {
@@ -660,6 +661,60 @@
     if (activeToolEl) activeToolEl.classList.add('active');
   }
 
+  function applyUIMode() {
+    // Toggle body class for CSS visibility rules
+    document.body.classList.toggle('child-mode', state.isChildMode);
+
+    // Update mode toggle button text
+    el.modeToggleBtn.textContent = state.isChildMode ? '성인 모드' : '어린이 모드';
+
+    // Update button text/icons
+    document.querySelectorAll('[data-adult-text]').forEach(btn => {
+      if (state.isChildMode) {
+        btn.textContent = btn.dataset.childIcon;
+      } else {
+        btn.textContent = btn.dataset.adultText;
+      }
+    });
+
+    // Manage color picker visibility and child color palette
+    if (state.isChildMode) {
+      el.color.parentElement.style.display = 'none'; // Hide adult color input row
+      el.childColorPalette.style.display = 'grid'; // Show child color palette
+      // Ensure current color is reflected in child palette
+      updateChildColorSwatchActive();
+    } else {
+      el.color.parentElement.style.display = 'flex'; // Show adult color input row
+      el.childColorPalette.style.display = 'none'; // Hide child color palette
+    }
+  }
+
+  const childColors = [
+    '#FF0000', '#FFA500', '#FFFF00', '#008000', '#0000FF', '#4B0082', '#EE82EE', // Rainbow
+    '#FFC0CB', '#800000', '#00FFFF', '#FFD700', '#C0C0C0', '#000000', '#FFFFFF'  // Pastels, dark, light
+  ];
+
+  function buildChildColorPalette() {
+    el.childColorPalette.innerHTML = '';
+    childColors.forEach(color => {
+      const swatch = document.createElement('div');
+      swatch.className = 'color-swatch';
+      swatch.style.backgroundColor = color;
+      swatch.dataset.color = color;
+      swatch.onclick = () => {
+        state.color = color;
+        updateChildColorSwatchActive();
+      };
+      el.childColorPalette.appendChild(swatch);
+    });
+  }
+
+  function updateChildColorSwatchActive() {
+    el.childColorPalette.querySelectorAll('.color-swatch').forEach(swatch => {
+      swatch.classList.toggle('active', swatch.dataset.color === state.color);
+    });
+  }
+
   function hasAnyPaint() {
     const W = paint.width, H = paint.height;
     const d = pctx.getImageData(0, 0, W, H).data;
@@ -671,7 +726,17 @@
 
   // ===== Event Listeners =====
   el.size.oninput = () => state.size = parseInt(el.size.value, 10) || 1;
-  el.color.oninput = () => { state.color = el.color.value; _patternKey = ''; };
+  el.color.oninput = () => {
+    if (!state.isChildMode) { // Only allow adult color input in adult mode
+      state.color = el.color.value;
+      _patternKey = '';
+    }
+  };
+  el.modeToggleBtn.onclick = () => {
+    state.isChildMode = !state.isChildMode;
+    localStorage.setItem('isChildMode', state.isChildMode); // Save preference
+    applyUIMode();
+  };
   el.toolBrush.onclick = () => { state.tool = 'brush'; applyToolActive(); setStatus('툴: 브러시'); };
   el.toolBucket.onclick = () => { state.tool = 'bucket'; applyToolActive(); setStatus('툴: 채우기'); };
   el.toolEraser.onclick = () => { state.tool = 'eraser'; applyToolActive(); setStatus('툴: 지우개'); };
@@ -758,11 +823,19 @@
 
     buildBrushBar();
     buildPatternBar();
-    applyToolActive(); // Call this at boot to set initial state
+    buildChildColorPalette(); // NEW: Build child color palette
+    applyToolActive();
     attachPointer();
     window.addEventListener('resize', resizeCanvases);
 
     resizeCanvases();
+
+    // Load child mode preference
+    const savedChildMode = localStorage.getItem('isChildMode');
+    if (savedChildMode !== null) {
+      state.isChildMode = savedChildMode === 'true';
+    }
+    applyUIMode(); // NEW: Apply UI mode on initial load
 
     await renderTemplateGallery();
 

@@ -10,6 +10,9 @@
 <div class="app">
   <aside class="sidebar">
     <div class="status" id="status">상태: 준비</div>
+    <div class="row">
+      <button type="button" id="modeToggleBtn">어린이 모드</button>
+    </div>
     <div><strong>도안</strong></div>
     <div class="row">
       <select id="templateSelect">
@@ -17,16 +20,16 @@
         <option value="house">집</option>
         <option value="fish">물고기</option>
       </select>
-      <button type="button" id="changeTemplateBtn">변경</button>
+      <button type="button" id="changeTemplateBtn" data-adult-text="변경" data-child-icon="🔄">변경</button>
       <input id="tplFile" type="file" accept="image/*" style="display:none"/>
-      <button type="button" id="tplImportBtn">도안 불러오기</button>
+      <button type="button" id="tplImportBtn" data-adult-text="도안 불러오기" data-child-icon="🖼️">도안 불러오기</button>
     </div>
     <div class="row">
-      <button type="button" id="saveBtn">저장</button>
-      <button type="button" id="loadBtn">불러오기</button>
-      <button type="button" id="downloadBtn" title="이미지로 다운로드">⬇️</button>
-      <button type="button" id="clearPaintBtn">지우기(채색만)</button>
-      <button type="button" id="wipeAllBtn">전체 삭제(백지)</button>
+      <button type="button" id="saveBtn" data-adult-text="저장" data-child-icon="💾">저장</button>
+      <button type="button" id="loadBtn" data-adult-text="불러오기" data-child-icon="📂">불러오기</button>
+      <button type="button" id="downloadBtn" title="이미지로 다운로드" data-adult-text="이미지로 다운로드" data-child-icon="⬇️">⬇️</button>
+      <button type="button" id="clearPaintBtn" data-adult-text="지우기(채색만)" data-child-icon="🧹">지우기(채색만)</button>
+      <button type="button" id="wipeAllBtn" data-adult-text="전체 삭제(백지)" data-child-icon="🗑️">전체 삭제(백지)</button>
     </div>
     <hr/>
     <div><strong>저장된 도안</strong></div>
@@ -36,19 +39,24 @@
     <hr/>
     <div><strong>툴</strong></div>
     <div class="toolbar">
-      <button type="button" id="toolBrush" class="active" title="브러시">🖌️</button>
-      <button type="button" id="toolBucket" title="채우기">🪣</button>
-      <button type="button" id="toolEraser" title="지우개">🧽</button>
-      <button type="button" id="toolPan" title="이동">🖐️</button>
-      <button type="button" id="zoomInBtn" title="확대">➕</button>
-      <button type="button" id="zoomOutBtn" title="축소">➖</button>
-      <button type="button" id="resetViewBtn" title="뷰 리셋">원래대로</button>
-      <button type="button" id="undoBtn" title="되돌리기">↩︎</button>
-      <button type="button" id="redoBtn" title="다시하기">↪︎</button>
-      <button type="button" id="resetBtn" title="앱 리셋">⟲</button>
+      <button type="button" id="toolBrush" class="active" title="브러시" data-adult-text="브러시" data-child-icon="🖌️">🖌️</button>
+      <button type="button" id="toolBucket" title="채우기" data-adult-text="채우기" data-child-icon="🪣">🪣</button>
+      <button type="button" id="toolEraser" title="지우개" data-adult-text="지우개" data-child-icon="🧽">🧽</button>
+      <button type="button" id="toolPan" title="이동" data-adult-text="이동" data-child-icon="🖐️">🖐️</button>
+      <button type="button" id="zoomInBtn" title="확대" data-adult-text="확대" data-child-icon="➕">➕</button>
+      <button type="button" id="zoomOutBtn" title="축소" data-adult-text="축소" data-child-icon="➖">➖</button>
+      <button type="button" id="resetViewBtn" title="뷰 리셋" data-adult-text="원래대로" data-child-icon="🎯">원래대로</button>
+      <button type="button" id="undoBtn" title="되돌리기" data-adult-text="되돌리기" data-child-icon="↩︎">↩︎</button>
+      <button type="button" id="redoBtn" title="다시하기" data-adult-text="다시하기" data-child-icon="↪︎">↪︎</button>
+      <button type="button" id="resetBtn" title="앱 리셋" data-adult-text="앱 리셋" data-child-icon="🔄">⟲</button>
     </div>
     <div class="row"><label for="size">굵기</label><input id="size" type="range" min="1" max="60" value="18"/></div>
-    <div class="row"><label for="color">색상</label><input id="color" type="color" value="#ff7b00"/></div>
+    <div class="row adult-mode-only">
+      <label for="color">색상</label><input id="color" type="color" value="#ff7b00"/>
+    </div>
+    <div class="row child-mode-only" id="childColorPalette">
+      <!-- Child-friendly color swatches will be generated here by JavaScript -->
+    </div>
     <div class="row"><strong>브러시 타입</strong></div>
     <div class="row" id="brushBar"></div>
     <div class="row"><strong>패턴</strong></div>

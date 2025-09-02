@@ -1,4 +1,4 @@
-  :root { --bg:#111; --panel:#1b1b1b; --btn:#2a2a2a; --accent:#4ade80; --text:#eee; }
+:root { --bg:#111; --panel:#1b1b1b; --btn:#2a2a2a; --accent:#4ade80; --text:#eee; }
   * { box-sizing: border-box; }
   html, body { height:100%; }
   body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui, sans-serif; }
@@ -86,4 +86,34 @@
 
 .template-item:hover .delete-btn {
   opacity: 1; /* Show on hover */
+}
+
+/* Mode-specific visibility */
+.adult-mode-only { display: block; }
+.child-mode-only { display: none; }
+
+body.child-mode .adult-mode-only { display: none; }
+body.child-mode .child-mode-only { display: block; }
+
+/* Child Color Palette Styling */
+#childColorPalette {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid #333;
+  border-radius: 10px;
+}
+
+.color-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.color-swatch.active {
+  border-color: var(--accent);
 }
