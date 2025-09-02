@@ -134,39 +134,7 @@
     ctx.setTransform(state.scale, 0, 0, state.scale, state.panX, state.panY);
   }
 
-  function redrawAll() {
-    // Save context state
-    bctx.save();
-    pctx.save();
-
-    // Reset transforms and clear canvases
-    bctx.setTransform(1, 0, 0, 1, 0, 0);
-    pctx.setTransform(1, 0, 0, 1, 0, 0);
-    bctx.clearRect(0, 0, base.width, base.height);
-    pctx.clearRect(0, 0, paint.width, paint.height);
-
-    // Apply pan/zoom transforms
-    applyTransform(bctx);
-    applyTransform(pctx);
-
-    // Redraw content
-    drawBaseContent();
-    const lastSnapshot = state.undo[state.undo.length - 1];
-    if (lastSnapshot) {
-        // putImageData is not affected by transforms, so we draw it to an intermediate canvas
-        // and then draw that canvas onto the main one, which respects transforms.
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = lastSnapshot.width;
-        tempCanvas.height = lastSnapshot.height;
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.putImageData(lastSnapshot, 0, 0);
-        pctx.drawImage(tempCanvas, 0, 0);
-    }
-
-    // Restore context state
-    bctx.restore();
-    pctx.restore();
-  }
+  
 
   function redrawAll() {
     // Save context state
@@ -451,7 +419,7 @@
     const usePat = state.pattern !== 'none';
     const strokeStyle = usePat ? ensurePattern() : state.color;
     const fillStyle = strokeStyle;
-    pctx.lineWidth = state.size * dpr;
+    pctx.lineWidth = state.size * dpr / state.scale;
 
     switch (state.brush) {
       case 'pen':
@@ -694,7 +662,7 @@
       const p = canvasPos(e);
       if (state.tool === 'eraser') {
         pctx.globalCompositeOperation = 'destination-out';
-        pctx.lineWidth = state.size * dpr;
+        pctx.lineWidth = state.size * dpr / state.scale;
         pctx.lineCap = 'round';
         pctx.lineTo(p.x, p.y);
         pctx.stroke();
