@@ -808,7 +808,17 @@
   el.tplFile.onchange = (e) => { const f = e.target.files && e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { const img = new Image(); img.onload = async () => {         const templateName = f.name.split('.').slice(0, -1).join('.') || 'untitled';
         const selectedCategory = el.tplCategory.value; // NEW: Get selected category
         try {
-          await addTemplateToDB(templateName, r.result, selectedCategory); // Pass category setStatus('도안 저장 완료: ' + templateName); await renderTemplateGallery(); const hadPaint = hasAnyPaint(); const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false; importTemplate(img, clearPaint); setStatus('도안 불러오기 완료' + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)')); } catch (error) { console.error('Failed to save template to DB:', error); setStatus('도안 저장 실패'); } }; img.src = r.result; }; r.readAsDataURL(f); };
+          await addTemplateToDB(templateName, r.result, selectedCategory); // Pass category
+          setStatus('도안 저장 완료: ' + templateName);
+          await renderTemplateGallery();
+          const hadPaint = hasAnyPaint();
+          const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;
+          importTemplate(img, clearPaint);
+          setStatus('도안 불러오기 완료' + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
+        } catch (error) {
+          console.error('Failed to save template to DB:', error);
+          setStatus('도안 저장 실패');
+        } }; img.src = r.result; }; r.readAsDataURL(f); };
   
   el.changeTemplateBtn.onclick = () => {
     const hadPaint = hasAnyPaint();
