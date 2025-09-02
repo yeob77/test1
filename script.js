@@ -130,9 +130,9 @@
     snapshot();
   }
 
-  function applyTransform(ctx) {
-    ctx.setTransform(state.scale, 0, 0, state.scale, state.panX, state.panY);
-  }
+  function applyViewTransform() {
+    console.log(`Applying transform: scale=${state.scale.toFixed(2)}, panX=${state.panX.toFixed(2)}, panY=${state.panY.toFixed(2)}`);
+    const dpr = paint.width / paint.getBoundingClientRect().width;
 
   
 
@@ -286,7 +286,9 @@
     const screenX = (('touches' in e ? e.touches[0].clientX : e.clientX) - r.left);
     const screenY = (('touches' in e ? e.touches[0].clientY : e.clientY) - r.top);
     const canvasX = (screenX * dpr - state.panX) / state.scale;
-    const canvasY = (screenY * dpr - state.panY) / state.scale;
+    const canvasY = (cssY * dpr - state.panY) / state.scale;
+
+    console.log(`canvasPos: css=(${cssX.toFixed(2)}, ${cssY.toFixed(2)}), canvas=(${canvasX.toFixed(2)}, ${canvasY.toFixed(2)})`);
     return { x: Math.round(canvasX), y: Math.round(canvasY) };
   }
 
