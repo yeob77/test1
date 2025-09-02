@@ -866,12 +866,15 @@
   };
 
   async function renderTemplateGallery() {
+    console.log('renderTemplateGallery started.');
     el.templateGallery.innerHTML = '';
     try {
       const allTemplates = await getTemplatesFromDB();
+      console.log('All templates fetched:', allTemplates.length);
       const filteredTemplates = state.currentCategory === 'all'
         ? allTemplates
         : allTemplates.filter(tpl => tpl.category === state.currentCategory);
+      console.log('Filtered templates:', filteredTemplates.length);
 
       const totalPages = Math.ceil(filteredTemplates.length / TEMPLATES_PER_PAGE);
       state.currentPage = Math.max(1, Math.min(state.currentPage, totalPages || 1)); // Ensure current page is valid
@@ -882,14 +885,17 @@
 
       if (filteredTemplates.length === 0) {
         el.templateGallery.innerHTML = '<div style="text-align:center; padding:10px; font-size:0.9em; color:#aaa;">저장된 도안이 없습니다.</div>';
+        console.log('No templates to display.');
         return;
       }
 
       const startIndex = (state.currentPage - 1) * TEMPLATES_PER_PAGE;
       const endIndex = startIndex + TEMPLATES_PER_PAGE;
       const templatesToDisplay = filteredTemplates.slice(startIndex, endIndex);
+      console.log('Templates to display on current page:', templatesToDisplay.length);
 
       templatesToDisplay.forEach(tpl => {
+        console.log('Rendering template:', tpl.name);
         const item = document.createElement('div');
         item.className = 'template-item';
         item.dataset.name = tpl.name;
@@ -944,11 +950,13 @@
 
   // ===== Modal Functions =====
   function showModal(imageUrl) {
+    console.log('showModal called with image:', imageUrl ? imageUrl.substring(0, 50) + '...' : 'null');
     el.modalImage.src = imageUrl;
     el.templateModal.style.display = 'flex'; // Use flex to show and center
   }
 
   function hideModal() {
+    console.log('hideModal called.');
     el.templateModal.style.display = 'none';
     el.modalImage.src = ''; // Clear image source
   }
@@ -956,8 +964,10 @@
 
   // ===== Boot =====
   async function boot() {
+    console.log('Boot function started.');
     try {
       await openColoringDB();
+      console.log('IndexedDB opened.');
       setStatus('데이터베이스 준비 완료');
     } catch (error) {
       setStatus('데이터베이스 오류');
