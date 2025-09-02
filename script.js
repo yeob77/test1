@@ -66,7 +66,7 @@
   const bctx = base.getContext('2d', { willReadFrequently: true });
   const pctx = paint.getContext('2d', { willReadFrequently: true });
 
-  const ids = ['clearPaintBtn', 'wipeAllBtn', 'saveBtn', 'loadBtn', 'downloadBtn', 'size', 'color', 'toolBrush', 'toolBucket', 'toolEraser', 'toolPan', 'zoomInBtn', 'zoomOutBtn', 'resetViewBtn', 'undoBtn', 'redoBtn', 'resetBtn', 'tplFile', 'tplImportBtn', 'templateSelect', 'changeTemplateBtn', 'brushBar', 'patternBar', 'bucketPattern', 'templateGallery', 'modeToggleBtn', 'childColorPalette', 'prevTemplatePageBtn', 'nextTemplatePageBtn', 'templatePageInfo', 'tplCategory', 'templateCategoryButtons'];
+  const ids = ['clearPaintBtn', 'wipeAllBtn', 'saveBtn', 'loadBtn', 'downloadBtn', 'size', 'color', 'toolBrush', 'toolBucket', 'toolEraser', 'toolPan', 'zoomInBtn', 'zoomOutBtn', 'resetViewBtn', 'undoBtn', 'redoBtn', 'resetBtn', 'tplFile', 'tplImportBtn', 'templateSelect', 'changeTemplateBtn', 'brushBar', 'patternBar', 'bucketPattern', 'templateGallery', 'modeToggleBtn', 'childColorPalette', 'prevTemplatePageBtn', 'nextTemplatePageBtn', 'templatePageInfo', 'tplCategory', 'templateCategoryButtons', 'templateModal', 'modalImage', 'closeButton'];
   const el = {};
   ids.forEach(i => el[i] = $(i));
 
@@ -918,6 +918,11 @@
         };
         item.appendChild(deleteBtn);
         item.onclick = () => {
+          // Open modal for large view
+          showModal(tpl.data);
+        };
+        item.ondblclick = () => {
+          // Existing logic for loading template to canvas
           [...el.templateGallery.children].forEach(child => child.classList.remove('active'));
           item.classList.add('active');
           const hadPaint = hasAnyPaint();
@@ -935,6 +940,17 @@
       console.error('Failed to load templates from DB:', error);
       setStatus('도안 불러오기 실패');
     }
+  }
+
+  // ===== Modal Functions =====
+  function showModal(imageUrl) {
+    el.modalImage.src = imageUrl;
+    el.templateModal.style.display = 'flex'; // Use flex to show and center
+  }
+
+  function hideModal() {
+    el.templateModal.style.display = 'none';
+    el.modalImage.src = ''; // Clear image source
   }
 
 
@@ -965,6 +981,19 @@
       state.isChildMode = savedChildMode === 'true';
     }
     applyUIMode(); // NEW: Apply UI mode on initial load
+
+    // Modal event listeners
+    el.closeButton.onclick = hideModal;
+    window.onclick = (event) => {
+      if (event.target === el.templateModal) {
+        hideModal();
+      }
+    };
+    window.onkeydown = (event) => {
+      if (event.key === 'Escape') {
+        hideModal();
+      }
+    };
 
     await renderTemplateGallery();
 
