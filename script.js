@@ -537,17 +537,19 @@
         const dpr = paint.width / r.width;
         
         const currentPinchCenter = getTouchCenter(e.touches, r);
-        const dx = (currentPinchCenter.x - pinchCenter.x) * dpr;
-        const dy = (currentPinchCenter.y - pinchCenter.y) * dpr;
+        const pcX = currentPinchCenter.x * dpr; // Pinch center in device pixels
+        const pcY = currentPinchCenter.y * dpr;
 
-        state.panX += dx;
-        state.panY += dy;
+        // Calculate new pan based on keeping pinch center stationary
+        const newPanX = pcX * (1 - newScale / state.scale) + state.panX * (newScale / state.scale);
+        const newPanY = pcY * (1 - newScale / state.scale) + state.panY * (newScale / state.scale);
 
-        const panXAmount = (currentPinchCenter.x * dpr - state.panX) * (newScale / state.scale - 1);
-        const panYAmount = (currentPinchCenter.y * dpr - state.panY) * (newScale / state.scale - 1);
-        
-        state.panX -= panXAmount;
-        state.panY -= panYAmount;
+        // Adjust pan based on movement of pinch center
+        const deltaX = (currentPinchCenter.x - pinchCenter.x) * dpr;
+        const deltaY = (currentPinchCenter.y - pinchCenter.y) * dpr;
+
+        state.panX = newPanX + deltaX;
+        state.panY = newPanY + deltaY;
         state.scale = newScale;
 
         lastTouchDistance = newTouchDistance;
