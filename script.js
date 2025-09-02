@@ -713,7 +713,7 @@
     applyViewTransform();
   };
 
-  el.clearPaintBtn.onclick = () => { pctx.clearRect(0, 0, paint.width, paint.height); snapshot(); setStatus('채색만 지움(도안 유지)'); };
+  el.clearPaintBtn.onclick = () => { snapshot(); pctx.clearRect(0, 0, paint.width, paint.height); setStatus('채색만 지움(도안 유지)'); };
   el.wipeAllBtn.onclick = () => { if (!confirm('정말 전체 삭제(도안 포함)할까요?')) return; bctx.clearRect(0, 0, base.width, base.height); pctx.clearRect(0, 0, paint.width, paint.height); snapshot(); setStatus('전체 삭제 완료'); };
   el.saveBtn.onclick = () => { const W = base.width, H = base.height; const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H; const t = tmp.getContext('2d'); t.drawImage(base, 0, 0, W, H); t.drawImage(paint, 0, 0, W, H); const url = tmp.toDataURL('image/png'); localStorage.setItem('coloring.save', url); setStatus('저장 완료'); };
   el.loadBtn.onclick = () => { const url = localStorage.getItem('coloring.save'); if (!url) { setStatus('저장본 없음'); return; } const img = new Image(); img.onload = () => { const W = base.width, H = base.height; bctx.clearRect(0, 0, W, H); pctx.clearRect(0, 0, paint.width, paint.height); bctx.drawImage(img, 0, 0, W, H); snapshot(); setStatus('불러오기 완료(합성본을 도안으로 올림)'); }; img.src = url; };
