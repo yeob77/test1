@@ -3,7 +3,7 @@
   html, body { height:100%; }
   body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui, sans-serif; }
   .app { display:grid; grid-template-columns: 320px 1fr; height:100vh; }
-  .sidebar { background:var(--panel); padding:12px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .sidebar { position: relative; z-index: 10; background:var(--panel); padding:12px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
   .toolbar { display:grid; grid-template-columns: repeat(6, 1fr); gap:8px; }
   button, select, input[type="range"] { background:var(--btn); color:var(--text); border:1px solid #333; border-radius:10px; padding:8px; cursor:pointer; }
   button.active { outline:2px solid var(--accent); }
