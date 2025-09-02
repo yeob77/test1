@@ -96,7 +96,6 @@
 
   // ===== NEW: Transform & Drawing Logic (Refactored) =====
 
-  // This function applies the view transform using CSS
   function applyViewTransform() {
     const dpr = paint.width / paint.getBoundingClientRect().width;
     const cssPanX = state.panX / dpr;
@@ -108,26 +107,25 @@
     });
   }
 
-  // This function redraws the canvases from the current state
-  function redrawAll() {
-    // Redraw base content (template)
-    bctx.save();
-    bctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform before clearing
-    bctx.clearRect(0, 0, base.width, base.height);
-    bctx.fillStyle = '#fff';
-    bctx.fillRect(0, 0, base.width, base.height);
-    drawBaseContent();
-    bctx.restore();
+  function redrawPaintCanvas() {
+      pctx.save();
+      pctx.setTransform(1, 0, 0, 1, 0, 0);
+      pctx.clearRect(0, 0, paint.width, paint.height);
+      const lastSnapshot = state.undo[state.undo.length - 1];
+      if (lastSnapshot) {
+        pctx.putImageData(lastSnapshot, 0, 0);
+      }
+      pctx.restore();
+  }
 
-    // Redraw paint content from the last snapshot
-    pctx.save();
-    pctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform before clearing
-    pctx.clearRect(0, 0, paint.width, paint.height);
-    const lastSnapshot = state.undo[state.undo.length - 1];
-    if (lastSnapshot) {
-      pctx.putImageData(lastSnapshot, 0, 0);
-    }
-    pctx.restore();
+  function redrawBaseCanvas() {
+      bctx.save();
+      bctx.setTransform(1, 0, 0, 1, 0, 0);
+      bctx.clearRect(0, 0, base.width, base.height);
+      bctx.fillStyle = '#fff';
+      bctx.fillRect(0, 0, base.width, base.height);
+      drawBaseContent();
+      bctx.restore();
   }
   
   function resizeCanvases() {
@@ -145,12 +143,12 @@
     state.scale = 1;
     state.panX = 0;
     state.panY = 0;
-    applyViewTransform(); // Apply new CSS transform
+    applyViewTransform();
 
     state.undo = [];
     state.redo = [];
     
-    redrawAll();
+    redrawBaseCanvas();
     
     pctx.save();
     pctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -218,6 +216,7 @@
   }
 
   function importTemplate(img, clearPaint) {
+    redrawBaseCanvas();
     const W = base.width, H = base.height;
     bctx.clearRect(0, 0, W, H);
     bctx.fillStyle = '#fff';
@@ -251,7 +250,7 @@
     if (state.undo.length <= 1) return;
     const lastState = state.undo.pop();
     state.redo.push(lastState);
-    redrawAll();
+    redrawPaintCanvas();
     setStatus('되돌리기');
   }
 
@@ -259,27 +258,20 @@
     if (!state.redo.length) return;
     const nextState = state.redo.pop();
     state.undo.push(nextState);
-    redrawAll();
+    redrawPaintCanvas();
     setStatus('다시하기');
   }
 
   // ===== Coords (Refactored) =====
   function canvasPos(e) {
-    const r = base.getBoundingClientRect(); // Use base canvas for rect
+    const r = base.getBoundingClientRect();
     const dpr = paint.width / r.width;
-    
-    // Screen coordinates of the event
     const screenX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const screenY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-
-    // Translate screen coordinates to canvas element coordinates
     const cssX = screenX - r.left;
     const cssY = screenY - r.top;
-
-    // Reverse the CSS transform to get the untransformed canvas coordinates
     const canvasX = (cssX * dpr - state.panX) / state.scale;
     const canvasY = (cssY * dpr - state.panY) / state.scale;
-
     return { x: Math.round(canvasX), y: Math.round(canvasY) };
   }
 
@@ -384,7 +376,7 @@
     const usePat = state.pattern !== 'none';
     const strokeStyle = usePat ? ensurePattern() : state.color;
     const fillStyle = strokeStyle;
-    pctx.lineWidth = state.size * dpr; // No scaling needed here anymore
+    pctx.lineWidth = state.size * dpr;
 
     switch (state.brush) {
       case 'pen':
@@ -527,19 +519,28 @@
     function onPointerMove(e) {
       if (e.touches && e.touches.length === 2) {
         e.preventDefault();
+        const r = base.getBoundingClientRect();
         const newTouchDistance = getTouchDistance(e.touches);
         const scaleFactor = newTouchDistance / lastTouchDistance;
         const newScale = Math.max(0.2, Math.min(state.scale * scaleFactor, 10));
+        const dpr = paint.width / r.width;
         
-        const dpr = paint.width / paint.getBoundingClientRect().width;
-        const dx = (pinchCenter.x * dpr - state.panX) * (newScale / state.scale - 1);
-        const dy = (pinchCenter.y * dpr - state.panY) * (newScale / state.scale - 1);
+        const currentPinchCenter = getTouchCenter(e.touches, r);
+        const dx = (currentPinchCenter.x - pinchCenter.x) * dpr;
+        const dy = (currentPinchCenter.y - pinchCenter.y) * dpr;
 
-        state.panX -= dx;
-        state.panY -= dy;
+        state.panX += dx;
+        state.panY += dy;
+
+        const panXAmount = (currentPinchCenter.x * dpr - state.panX) * (newScale / state.scale - 1);
+        const panYAmount = (currentPinchCenter.y * dpr - state.panY) * (newScale / state.scale - 1);
+        
+        state.panX -= panXAmount;
+        state.panY -= panYAmount;
         state.scale = newScale;
 
         lastTouchDistance = newTouchDistance;
+        pinchCenter = currentPinchCenter;
         applyViewTransform();
         return;
       }
@@ -577,7 +578,7 @@
       const mouseY = (e.clientY - r.top) * dpr;
 
       const scaleAmount = e.deltaY < 0 ? 1.1 : 1 / 1.1;
-      const newScale = Math.max(0.2, Math.min(newScale, 10));
+      const newScale = Math.max(0.2, Math.min(state.scale * scaleAmount, 10));
 
       const dx = (mouseX - state.panX) * (newScale / state.scale - 1);
       const dy = (mouseY - state.panY) * (newScale / state.scale - 1);
@@ -598,13 +599,46 @@
     paint.addEventListener('wheel', handleWheel, { passive: false });
   }
 
-  // ===== UI wiring (Refactored) =====
+  // ===== UI wiring =====
   const brushes = [{ id: 'pen', label: '펜' }, { id: 'marker', label: '마커' }, { id: 'calligraphy', label: '캘리' }, { id: 'crayon', label: '크레용' }, { id: 'neon', label: '네온' }];
   const patterns = [{ id: 'none', label: '단색' }, { id: 'dots', label: '도트' }, { id: 'stripes', label: '줄무늬' }, { id: 'star', label: '별' }, { id: 'heart', label: '하트' }];
 
-  function buildBrushBar() { /* Unchanged */ el.brushBar.innerHTML = ''; brushes.forEach(b => { const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = b.label; btn.className = 'pbtn' + (state.brush === b.id ? ' active' : ''); btn.onclick = () => { state.brush = b.id; [...el.brushBar.children].forEach(x => x.classList.remove('active')); btn.classList.add('active'); setStatus('브러시: ' + b.label); }; el.brushBar.appendChild(btn); }); }
-  function buildPatternBar() { /* Unchanged */ el.patternBar.innerHTML = ''; patterns.forEach(p => { const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = p.label; btn.className = 'pbtn' + (state.pattern === p.id ? ' active' : ''); btn.onclick = () => { state.pattern = p.id; _patternKey = ''; [...el.patternBar.children].forEach(x => x.classList.remove('active')); btn.classList.add('active'); setStatus('패턴: ' + p.label); }; el.patternBar.appendChild(btn); }
-    function applyToolActive() {
+  function buildBrushBar() {
+    el.brushBar.innerHTML = '';
+    brushes.forEach(b => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = b.label;
+      btn.className = 'pbtn' + (state.brush === b.id ? ' active' : '');
+      btn.onclick = () => {
+        state.brush = b.id;
+        [...el.brushBar.children].forEach(x => x.classList.remove('active'));
+        btn.classList.add('active');
+        setStatus('브러시: ' + b.label);
+      };
+      el.brushBar.appendChild(btn);
+    });
+  }
+
+  function buildPatternBar() {
+    el.patternBar.innerHTML = '';
+    patterns.forEach(p => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = p.label;
+      btn.className = 'pbtn' + (state.pattern === p.id ? ' active' : '');
+      btn.onclick = () => {
+        state.pattern = p.id;
+        _patternKey = '';
+        [...el.patternBar.children].forEach(x => x.classList.remove('active'));
+        btn.classList.add('active');
+        setStatus('패턴: ' + p.label);
+      };
+      el.patternBar.appendChild(btn);
+    });
+  }
+
+  function applyToolActive() {
     ['toolBrush', 'toolBucket', 'toolEraser', 'toolPan'].forEach(id => {
       const toolEl = $(id);
       if (toolEl) toolEl.classList.remove('active');
@@ -612,9 +646,17 @@
     const activeToolEl = $('tool' + (state.tool.charAt(0).toUpperCase() + state.tool.slice(1)));
     if (activeToolEl) activeToolEl.classList.add('active');
   }
-  function hasAnyPaint() { /* Unchanged */ const W = paint.width, H = paint.height; const d = pctx.getImageData(0, 0, W, H).data; for (let i = 3; i < d.length; i += 4) { if (d[i] > 0) return true; } return false; }
 
-  // ===== Event Listeners (Refactored) =====
+  function hasAnyPaint() {
+    const W = paint.width, H = paint.height;
+    const d = pctx.getImageData(0, 0, W, H).data;
+    for (let i = 3; i < d.length; i += 4) {
+      if (d[i] > 0) return true;
+    }
+    return false;
+  }
+
+  // ===== Event Listeners =====
   el.size.oninput = () => state.size = parseInt(el.size.value, 10) || 1;
   el.color.oninput = () => { state.color = el.color.value; _patternKey = ''; };
   el.toolBrush.onclick = () => { state.tool = 'brush'; applyToolActive(); setStatus('툴: 브러시'); };
@@ -626,10 +668,11 @@
   el.resetBtn.onclick = () => location.reload();
 
   el.zoomInBtn.onclick = () => {
+    const r = base.getBoundingClientRect();
+    const dpr = paint.width / r.width;
+    const centerX = r.width / 2 * dpr;
+    const centerY = r.height / 2 * dpr;
     const newScale = Math.min(10, state.scale * 1.2);
-    const dpr = paint.width / paint.getBoundingClientRect().width;
-    const centerX = (paint.width / 2);
-    const centerY = (paint.height / 2);
     const dx = (centerX - state.panX) * (newScale / state.scale - 1);
     const dy = (centerY - state.panY) * (newScale / state.scale - 1);
     state.panX -= dx;
@@ -638,10 +681,11 @@
     applyViewTransform();
   };
   el.zoomOutBtn.onclick = () => {
+    const r = base.getBoundingClientRect();
+    const dpr = paint.width / r.width;
+    const centerX = r.width / 2 * dpr;
+    const centerY = r.height / 2 * dpr;
     const newScale = Math.max(0.2, state.scale / 1.2);
-    const dpr = paint.width / paint.getBoundingClientRect().width;
-    const centerX = (paint.width / 2);
-    const centerY = (paint.height / 2);
     const dx = (centerX - state.panX) * (newScale / state.scale - 1);
     const dy = (centerY - state.panY) * (newScale / state.scale - 1);
     state.panX -= dx;
@@ -669,23 +713,24 @@
     const clearPaint = hadPaint ? confirm('도안을 변경합니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;
     state.template = el.templateSelect.value;
     
-    state.undo = [];
-    state.redo = [];
     state.scale = 1;
     state.panX = 0;
     state.panY = 0;
     applyViewTransform();
-    redrawAll(); 
+    redrawBaseCanvas(); 
     
     if (clearPaint) {
       pctx.clearRect(0, 0, paint.width, paint.height);
     }
+    
+    state.undo = [];
+    state.redo = [];
     snapshot();
 
     setStatus('도안 변경: ' + state.template + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
   };
 
-  async function renderTemplateGallery() { /* Unchanged */ el.templateGallery.innerHTML = ''; try { const templates = await getTemplatesFromDB(); if (templates.length === 0) { el.templateGallery.innerHTML = '<div style="text-align:center; padding:10px; font-size:0.9em; color:#aaa;">저장된 도안이 없습니다.</div>'; return; } templates.forEach(tpl => { const item = document.createElement('div'); item.className = 'template-item'; item.dataset.name = tpl.name; const img = document.createElement('img'); img.src = tpl.data; img.alt = tpl.name; item.appendChild(img); const nameSpan = document.createElement('span'); nameSpan.textContent = tpl.name; item.appendChild(nameSpan); const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-btn'; deleteBtn.textContent = 'X'; deleteBtn.onclick = async (e) => { e.stopPropagation(); if (confirm(`'${tpl.name}' 도안을 삭제하시겠습니까?`)) { try { await deleteTemplateFromDB(tpl.name); setStatus(`'${tpl.name}' 도안 삭제 완료`); renderTemplateGallery(); } catch (error) { console.error('Failed to delete template:', error); setStatus('도안 삭제 실패'); } } }; item.appendChild(deleteBtn); item.onclick = () => { [...el.templateGallery.children].forEach(child => child.classList.remove('active')); item.classList.add('active'); const hadPaint = hasAnyPaint(); const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false; const imgToLoad = new Image(); imgToLoad.onload = () => { importTemplate(imgToLoad, clearPaint); setStatus('도안 불러오기 완료: ' + tpl.name + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)')); }; imgToLoad.src = tpl.data; }; el.templateGallery.appendChild(item); }); } catch (error) { console.error('Failed to load templates from DB:', error); setStatus('도안 불러오기 실패'); } }
+  async function renderTemplateGallery() { el.templateGallery.innerHTML = ''; try { const templates = await getTemplatesFromDB(); if (templates.length === 0) { el.templateGallery.innerHTML = '<div style="text-align:center; padding:10px; font-size:0.9em; color:#aaa;">저장된 도안이 없습니다.</div>'; return; } templates.forEach(tpl => { const item = document.createElement('div'); item.className = 'template-item'; item.dataset.name = tpl.name; const img = document.createElement('img'); img.src = tpl.data; img.alt = tpl.name; item.appendChild(img); const nameSpan = document.createElement('span'); nameSpan.textContent = tpl.name; item.appendChild(nameSpan); const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-btn'; deleteBtn.textContent = 'X'; deleteBtn.onclick = async (e) => { e.stopPropagation(); if (confirm(`'${tpl.name}' 도안을 삭제하시겠습니까?`)) { try { await deleteTemplateFromDB(tpl.name); setStatus(`'${tpl.name}' 도안 삭제 완료`); renderTemplateGallery(); } catch (error) { console.error('Failed to delete template:', error); setStatus('도안 삭제 실패'); } } }; item.appendChild(deleteBtn); item.onclick = () => { [...el.templateGallery.children].forEach(child => child.classList.remove('active')); item.classList.add('active'); const hadPaint = hasAnyPaint(); const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false; const imgToLoad = new Image(); imgToLoad.onload = () => { importTemplate(imgToLoad, clearPaint); setStatus('도안 불러오기 완료: ' + tpl.name + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)')); }; imgToLoad.src = tpl.data; }; el.templateGallery.appendChild(item); }); } catch (error) { console.error('Failed to load templates from DB:', error); setStatus('도안 불러오기 실패'); } }
 
   // ===== Boot =====
   async function boot() {
@@ -700,10 +745,11 @@
 
     buildBrushBar();
     buildPatternBar();
+    applyToolActive(); // Call this at boot to set initial state
     attachPointer();
     window.addEventListener('resize', resizeCanvases);
 
-    resizeCanvases(); // This will set up initial size, state, and snapshot
+    resizeCanvases();
 
     await renderTemplateGallery();
 
