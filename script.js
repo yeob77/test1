@@ -419,7 +419,7 @@
     const usePat = state.pattern !== 'none';
     const strokeStyle = usePat ? ensurePattern() : state.color;
     const fillStyle = strokeStyle;
-    pctx.lineWidth = state.size * dpr / state.scale;
+    pctx.lineWidth = state.size * dpr;
 
     switch (state.brush) {
       case 'pen':
@@ -662,7 +662,7 @@
       const p = canvasPos(e);
       if (state.tool === 'eraser') {
         pctx.globalCompositeOperation = 'destination-out';
-        pctx.lineWidth = state.size * dpr / state.scale;
+        pctx.lineWidth = state.size * dpr;
         pctx.lineCap = 'round';
         pctx.lineTo(p.x, p.y);
         pctx.stroke();
