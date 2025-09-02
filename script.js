@@ -604,7 +604,14 @@
 
   function buildBrushBar() { /* Unchanged */ el.brushBar.innerHTML = ''; brushes.forEach(b => { const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = b.label; btn.className = 'pbtn' + (state.brush === b.id ? ' active' : ''); btn.onclick = () => { state.brush = b.id; [...el.brushBar.children].forEach(x => x.classList.remove('active')); btn.classList.add('active'); setStatus('브러시: ' + b.label); }; el.brushBar.appendChild(btn); }); }
   function buildPatternBar() { /* Unchanged */ el.patternBar.innerHTML = ''; patterns.forEach(p => { const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = p.label; btn.className = 'pbtn' + (state.pattern === p.id ? ' active' : ''); btn.onclick = () => { state.pattern = p.id; _patternKey = ''; [...el.patternBar.children].forEach(x => x.classList.remove('active')); btn.classList.add('active'); setStatus('패턴: ' + p.label); }; el.patternBar.appendChild(btn); }
-  function applyToolActive() { /* Unchanged */ ['toolBrush', 'toolBucket', 'toolEraser', 'toolPan'].forEach(id => $(id).classList.remove('active')); $('tool' + (state.tool.charAt(0).toUpperCase() + state.tool.slice(1))).classList.add('active'); }
+    function applyToolActive() {
+    ['toolBrush', 'toolBucket', 'toolEraser', 'toolPan'].forEach(id => {
+      const toolEl = $(id);
+      if (toolEl) toolEl.classList.remove('active');
+    });
+    const activeToolEl = $('tool' + (state.tool.charAt(0).toUpperCase() + state.tool.slice(1)));
+    if (activeToolEl) activeToolEl.classList.add('active');
+  }
   function hasAnyPaint() { /* Unchanged */ const W = paint.width, H = paint.height; const d = pctx.getImageData(0, 0, W, H).data; for (let i = 3; i < d.length; i += 4) { if (d[i] > 0) return true; } return false; }
 
   // ===== Event Listeners (Refactored) =====
