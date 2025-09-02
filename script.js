@@ -430,6 +430,17 @@
     lastX = x; lastY = y;
   }
 
+  function hexToRGB(hex) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return [r, g, b];
+  }
+
+  function colorDist(c1, c2) {
+    return Math.sqrt(Math.pow(c1[0] - c2[0], 2) + Math.pow(c1[1] - c2[1], 2) + Math.pow(c1[2] - c2[2], 2));
+  }
+
   // ===== Bucket Fill =====
   function bucketFill(sx, sy) {
     const W = paint.width, H = paint.height;
