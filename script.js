@@ -795,6 +795,15 @@
     state.currentPage++;
     renderTemplateGallery();
   };
+  el.prevTemplatePageBtn.onclick = () => {
+    state.currentPage--;
+    renderTemplateGallery();
+  };
+
+  el.nextTemplatePageBtn.onclick = () => {
+    state.currentPage++;
+    renderTemplateGallery();
+  };
   el.tplImportBtn.onclick = () => el.tplFile.click();
   el.tplFile.onchange = (e) => { const f = e.target.files && e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { const img = new Image(); img.onload = async () => {         const templateName = f.name.split('.').slice(0, -1).join('.') || 'untitled';
         const selectedCategory = el.tplCategory.value; // NEW: Get selected category
