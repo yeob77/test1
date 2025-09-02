@@ -25,6 +25,16 @@
       <button type="button" id="tplImportBtn" data-adult-text="도안 불러오기" data-child-icon="🖼️">도안 불러오기</button>
     </div>
     <div class="row">
+      <label for="tplCategory">카테고리:</label>
+      <select id="tplCategory">
+        <option value="uncategorized">미분류</option>
+        <option value="animals">동물</option>
+        <option value="nature">자연</option>
+        <option value="objects">사물</option>
+        <option value="abstract">추상</option>
+      </select>
+    </div>
+    <div class="row">
       <button type="button" id="saveBtn" data-adult-text="저장" data-child-icon="💾">저장</button>
       <button type="button" id="loadBtn" data-adult-text="불러오기" data-child-icon="📂">불러오기</button>
       <button type="button" id="downloadBtn" title="이미지로 다운로드" data-adult-text="이미지로 다운로드" data-child-icon="⬇️">⬇️</button>
@@ -33,6 +43,14 @@
     </div>
     <hr/>
     <div><strong>저장된 도안</strong></div>
+    <div class="row">
+      <button type="button" id="prevTemplatePageBtn">이전</button>
+      <span id="templatePageInfo">1 / 1</span>
+      <button type="button" id="nextTemplatePageBtn">다음</button>
+    </div>
+    <div class="row" id="templateCategoryButtons">
+      <!-- Category buttons will be generated here -->
+    </div>
     <div id="templateGallery" class="template-gallery">
       <!-- Templates will be loaded here -->
     </div>
