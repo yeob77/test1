@@ -901,7 +901,7 @@
             };
             img.src = reader.result;
         };
-        reader.onerror = (error) {
+        reader.onerror = (error) => {
             setStatus('파일 읽기 오류');
             console.error('FileReader error:', error);
         };
