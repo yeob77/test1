@@ -5,6 +5,7 @@
   const DB_NAME = 'ColoringBookDB';
   const DB_VERSION = 2;
   const STORE_NAME = 'templates';
+  const TEMPLATES_PER_PAGE = 12; // Number of templates to display per page
   let db;
 
   function openColoringDB() {
@@ -33,7 +34,7 @@
     });
   }
 
-  function addTemplateToDB(name, dataUrl, category = '기본') {
+  function addTemplateToDB(name, dataUrl, category = '기본') { // Kept local default param
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
@@ -77,7 +78,16 @@
   const bctx = base.getContext('2d', { willReadFrequently: true });
   const pctx = paint.getContext('2d', { willReadFrequently: true });
 
-  const ids = ['clearPaintBtn', 'wipeAllBtn', 'saveBtn', 'loadBtn', 'downloadBtn', 'size', 'color', 'toolBrush', 'toolBucket', 'toolEraser', 'toolPan', 'zoomInBtn', 'zoomOutBtn', 'resetViewBtn', 'undoBtn', 'redoBtn', 'resetBtn', 'tplFile', 'tplImportBtn', 'urlInput', 'urlImportBtn', 'templateSelect', 'changeTemplateBtn', 'brushBar', 'patternBar', 'bucketPattern', 'templateGallery', 'templateCategoryInput', 'categoryFilter'];
+  const ids = [ // Combined local and remote IDs
+    'clearPaintBtn', 'wipeAllBtn', 'saveBtn', 'loadBtn', 'downloadBtn', 'size', 'color',
+    'toolBrush', 'toolBucket', 'toolEraser', 'toolPan', 'zoomInBtn', 'zoomOutBtn',
+    'resetViewBtn', 'undoBtn', 'redoBtn', 'resetBtn', 'tplFile', 'tplImportBtn',
+    'urlInput', 'urlImportBtn', // My additions
+    'templateSelect', 'changeTemplateBtn', 'brushBar', 'patternBar', 'bucketPattern',
+    'templateGallery', 'modeToggleBtn', 'childColorPalette', 'prevTemplatePageBtn',
+    'nextTemplatePageBtn', 'templatePageInfo', 'tplCategory', 'templateCategoryButtons',
+    'templateModal', 'modalImage', 'closeButton'
+  ];
   const el = {};
   ids.forEach(i => el[i] = $(i));
 
@@ -99,7 +109,10 @@
     panY: 0,
     undo: [],
     redo: [],
-    maxUndo: 25
+    maxUndo: 25,
+    isChildMode: false,
+    currentPage: 1, // Current page for template gallery
+    currentCategory: 'all' // Current selected category for gallery
   };
 
   function setStatus(t) {
@@ -442,6 +455,17 @@
     lastX = x; lastY = y;
   }
 
+  function hexToRGB(hex) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return [r, g, b];
+  }
+
+  function colorDist(c1, c2) {
+    return Math.sqrt(Math.pow(c1[0] - c2[0], 2) + Math.pow(c1[1] - c2[1], 2) + Math.pow(c1[2] - c2[2], 2));
+  }
+
   // ===== Bucket Fill =====
   function bucketFill(sx, sy) {
     const W = paint.width, H = paint.height;
@@ -538,17 +562,19 @@
         const dpr = paint.width / r.width;
         
         const currentPinchCenter = getTouchCenter(e.touches, r);
-        const dx = (currentPinchCenter.x - pinchCenter.x) * dpr;
-        const dy = (currentPinchCenter.y - pinchCenter.y) * dpr;
+        const pcX = currentPinchCenter.x * dpr; // Pinch center in device pixels
+        const pcY = currentPinchCenter.y * dpr;
 
-        state.panX += dx;
-        state.panY += dy;
+        // Calculate new pan based on keeping pinch center stationary
+        const newPanX = pcX * (1 - newScale / state.scale) + state.panX * (newScale / state.scale);
+        const newPanY = pcY * (1 - newScale / state.scale) + state.panY * (newScale / state.scale);
 
-        const panXAmount = (currentPinchCenter.x * dpr - state.panX) * (newScale / state.scale - 1);
-        const panYAmount = (currentPinchCenter.y * dpr - state.panY) * (newScale / state.scale - 1);
-        
-        state.panX -= panXAmount;
-        state.panY -= panYAmount;
+        // Adjust pan based on movement of pinch center
+        const deltaX = (currentPinchCenter.x - pinchCenter.x) * dpr;
+        const deltaY = (currentPinchCenter.y - pinchCenter.y) * dpr;
+
+        state.panX = newPanX + deltaX;
+        state.panY = newPanY + deltaY;
         state.scale = newScale;
 
         lastTouchDistance = newTouchDistance;
@@ -659,6 +685,60 @@
     if (activeToolEl) activeToolEl.classList.add('active');
   }
 
+  function applyUIMode() {
+    // Toggle body class for CSS visibility rules
+    document.body.classList.toggle('child-mode', state.isChildMode);
+
+    // Update mode toggle button text
+    el.modeToggleBtn.textContent = state.isChildMode ? '성인 모드' : '어린이 모드';
+
+    // Update button text/icons
+    document.querySelectorAll('[data-adult-text]').forEach(btn => {
+      if (state.isChildMode) {
+        btn.textContent = btn.dataset.childIcon;
+      } else {
+        btn.textContent = btn.dataset.adultText;
+      }
+    });
+
+    // Manage color picker visibility and child color palette
+    if (state.isChildMode) {
+      el.color.parentElement.style.display = 'none'; // Hide adult color input row
+      el.childColorPalette.style.display = 'grid'; // Show child color palette
+      // Ensure current color is reflected in child palette
+      updateChildColorSwatchActive();
+    } else {
+      el.color.parentElement.style.display = 'flex'; // Show adult color input row
+      el.childColorPalette.style.display = 'none'; // Hide child color palette
+    }
+  }
+
+  const childColors = [
+    '#FF0000', '#FFA500', '#FFFF00', '#008000', '#0000FF', '#4B0082', '#EE82EE', // Rainbow
+    '#FFC0CB', '#800000', '#00FFFF', '#FFD700', '#C0C0C0', '#000000', '#FFFFFF'  // Pastels, dark, light
+  ];
+
+  function buildChildColorPalette() {
+    el.childColorPalette.innerHTML = '';
+    childColors.forEach(color => {
+      const swatch = document.createElement('div');
+      swatch.className = 'color-swatch';
+      swatch.style.backgroundColor = color;
+      swatch.dataset.color = color;
+      swatch.onclick = () => {
+        state.color = color;
+        updateChildColorSwatchActive();
+      };
+      el.childColorPalette.appendChild(swatch);
+    });
+  }
+
+  function updateChildColorSwatchActive() {
+    el.childColorPalette.querySelectorAll('.color-swatch').forEach(swatch => {
+      swatch.classList.toggle('active', swatch.dataset.color === state.color);
+    });
+  }
+
   function hasAnyPaint() {
     const W = paint.width, H = paint.height;
     const d = pctx.getImageData(0, 0, W, H).data;
@@ -670,7 +750,17 @@
 
   // ===== Event Listeners =====
   el.size.oninput = () => state.size = parseInt(el.size.value, 10) || 1;
-  el.color.oninput = () => { state.color = el.color.value; _patternKey = ''; };
+  el.color.oninput = () => {
+    if (!state.isChildMode) { // Only allow adult color input in adult mode
+      state.color = el.color.value;
+      _patternKey = '';
+    }
+  };
+  el.modeToggleBtn.onclick = () => {
+    state.isChildMode = !state.isChildMode;
+    localStorage.setItem('isChildMode', state.isChildMode); // Save preference
+    applyUIMode();
+  };
   el.toolBrush.onclick = () => { state.tool = 'brush'; applyToolActive(); setStatus('툴: 브러시'); };
   el.toolBucket.onclick = () => { state.tool = 'bucket'; applyToolActive(); setStatus('툴: 채우기'); };
   el.toolEraser.onclick = () => { state.tool = 'eraser'; applyToolActive(); setStatus('툴: 지우개'); };
@@ -678,6 +768,47 @@
   el.undoBtn.onclick = undo;
   el.redoBtn.onclick = redo;
   el.resetBtn.onclick = () => location.reload();
+
+  el.prevTemplatePageBtn.onclick = () => {
+    state.currentPage--;
+    renderTemplateGallery();
+  };
+
+  el.nextTemplatePageBtn.onclick = () => {
+    state.currentPage++;
+    renderTemplateGallery();
+  };
+
+  const TEMPLATE_CATEGORIES = [
+    { id: 'all', label: '모두', icon: '🌐' },
+    { id: 'uncategorized', label: '미분류', icon: '❓' },
+    { id: 'animals', label: '동물', icon: '🐾' },
+    { id: 'nature', label: '자연', icon: '🌳' },
+    { id: 'objects', label: '사물', icon: '💡' },
+    { id: 'abstract', label: '추상', icon: '🌀' }
+  ];
+
+  function buildCategoryButtons() {
+    el.templateCategoryButtons.innerHTML = '';
+    TEMPLATE_CATEGORIES.forEach(cat => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pbtn' + (state.currentCategory === cat.id ? ' active' : '');
+      btn.textContent = cat.icon; // Child-friendly icon
+      btn.title = cat.label; // Adult-friendly tooltip
+      btn.dataset.categoryId = cat.id;
+      btn.onclick = () => {
+        state.currentCategory = cat.id;
+        state.currentPage = 1; // Reset to first page when category changes
+        renderTemplateGallery();
+        // Update active class for category buttons
+        el.templateCategoryButtons.querySelectorAll('.pbtn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        setStatus(`카테고리: ${cat.label}`);
+      };
+      el.templateCategoryButtons.appendChild(btn);
+    });
+  };
 
   el.zoomInBtn.onclick = () => {
     const r = base.getBoundingClientRect();
@@ -712,13 +843,26 @@
     applyViewTransform();
   };
 
-  el.clearPaintBtn.onclick = () => { pctx.clearRect(0, 0, paint.width, paint.height); snapshot(); setStatus('채색만 지움(도안 유지)'); };
+  el.clearPaintBtn.onclick = () => { snapshot(); pctx.clearRect(0, 0, paint.width, paint.height); setStatus('채색만 지움(도안 유지)'); };
   el.wipeAllBtn.onclick = () => { if (!confirm('정말 전체 삭제(도안 포함)할까요?')) return; bctx.clearRect(0, 0, base.width, base.height); pctx.clearRect(0, 0, paint.width, paint.height); snapshot(); setStatus('전체 삭제 완료'); };
   el.saveBtn.onclick = () => { const W = base.width, H = base.height; const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H; const t = tmp.getContext('2d'); t.drawImage(base, 0, 0, W, H); t.drawImage(paint, 0, 0, W, H); const url = tmp.toDataURL('image/png'); localStorage.setItem('coloring.save', url); setStatus('저장 완료'); };
   el.loadBtn.onclick = () => { const url = localStorage.getItem('coloring.save'); if (!url) { setStatus('저장본 없음'); return; } const img = new Image(); img.onload = () => { const W = base.width, H = base.height; bctx.clearRect(0, 0, W, H); pctx.clearRect(0, 0, paint.width, paint.height); bctx.drawImage(img, 0, 0, W, H); snapshot(); setStatus('불러오기 완료(합성본을 도안으로 올림)'); }; img.src = url; };
   el.downloadBtn.onclick = () => { const W = base.width; const H = base.height; const tempCanvas = document.createElement('canvas'); tempCanvas.width = W; tempCanvas.height = H; const tempCtx = tempCanvas.getContext('2d'); tempCtx.fillStyle = '#fff'; tempCtx.fillRect(0, 0, W, H); tempCtx.drawImage(base, 0, 0); tempCtx.drawImage(paint, 0, 0); const link = document.createElement('a'); link.download = 'coloring-art.png'; link.href = tempCanvas.toDataURL('image/png'); link.click(); setStatus('이미지 다운로드 시작'); };
   el.tplImportBtn.onclick = () => el.tplFile.click();
-  el.tplFile.onchange = (e) => { const f = e.target.files && e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { const img = new Image(); img.onload = async () => { const templateName = f.name.split('.').slice(0, -1).join('.') || 'untitled'; const category = el.templateCategoryInput.value.trim() || '기본'; try { await addTemplateToDB(templateName, r.result, category); setStatus('도안 저장 완료: ' + templateName + ' (카테고리: ' + category + ')'); await renderTemplateGallery(); const hadPaint = hasAnyPaint(); const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false; importTemplate(img, clearPaint); setStatus('도안 불러오기 완료' + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)')); } catch (error) { console.error('Failed to save template to DB:', error); setStatus('도안 저장 실패'); } }; img.src = r.result; }; r.readAsDataURL(f); };
+  el.tplFile.onchange = (e) => { const f = e.target.files && e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { const img = new Image(); img.onload = async () => { const templateName = f.name.split('.').slice(0, -1).join('.') || 'untitled';
+        const selectedCategory = el.tplCategory.value; // Get selected category from remote's new select
+        try {
+          await addTemplateToDB(templateName, r.result, selectedCategory); // Pass category
+          setStatus('도안 저장 완료: ' + templateName);
+          await renderTemplateGallery();
+          const hadPaint = hasAnyPaint();
+          const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;
+          importTemplate(img, clearPaint);
+          setStatus('도안 불러오기 완료' + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
+        } catch (error) {
+          console.error('Failed to save template to DB:', error);
+          setStatus('도안 저장 실패');
+        } }; img.src = r.result; }; r.readAsDataURL(f); };
 
   async function importImageFromUrl(url) {
     if (!url) {
@@ -727,7 +871,7 @@
     }
     setStatus('URL에서 도안 불러오는 중...');
     try {
-        const response = await fetch(url);
+        const response = await fetch(url); // Reverted from proxy
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -737,7 +881,7 @@
             const img = new Image();
             img.onload = async () => {
                 const templateName = url.substring(url.lastIndexOf('/') + 1).split('?')[0].split('#')[0] || 'untitled_url'; // Extract name from URL, remove query/hash
-                const category = el.templateCategoryInput.value.trim() || '기본';
+                const category = el.tplCategory.value; // Use remote's new select for category
                 try {
                     await addTemplateToDB(templateName, reader.result, category);
                     setStatus('도안 저장 완료: ' + templateName + ' (카테고리: ' + category + ')');
@@ -757,7 +901,7 @@
             };
             img.src = reader.result;
         };
-        reader.onerror = (error) => {
+        reader.onerror = (error) {
             setStatus('파일 읽기 오류');
             console.error('FileReader error:', error);
         };
@@ -795,12 +939,109 @@
     setStatus('도안 변경: ' + state.template + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
   };
 
-  async function renderTemplateGallery(filterCategory = 'all') {el.templateGallery.innerHTML = '';try {const allTemplates = await getTemplatesFromDB('all');const uniqueCategories = ['all', ...new Set(allTemplates.map(tpl => tpl.category).filter(Boolean))].sort();el.categoryFilter.innerHTML = '';uniqueCategories.forEach(cat => {const option = document.createElement('option');option.value = cat;option.textContent = cat === 'all' ? '모두' : cat;if (cat === filterCategory) {option.selected = true;}el.categoryFilter.appendChild(option);});const templatesToDisplay = filterCategory === 'all' ? allTemplates : allTemplates.filter(tpl => tpl.category === filterCategory);if (templatesToDisplay.length === 0) {el.templateGallery.innerHTML = '<div style="text-align:center; padding:10px; font-size:0.9em; color:#aaa;">저장된 도안이 없습니다.</div>';return;}templatesToDisplay.forEach(tpl => {const item = document.createElement('div');item.className = 'template-item';item.dataset.name = tpl.name;const img = document.createElement('img');img.src = tpl.data;img.alt = tpl.name;item.appendChild(img);const nameSpan = document.createElement('span');nameSpan.textContent = tpl.name;item.appendChild(nameSpan);if (tpl.category) {const categorySpan = document.createElement('span');categorySpan.className = 'template-category';categorySpan.textContent = `[${tpl.category}]`;item.appendChild(categorySpan);}const deleteBtn = document.createElement('button');deleteBtn.className = 'delete-btn';deleteBtn.textContent = 'X';deleteBtn.onclick = async (e) => {e.stopPropagation();if (confirm(`'${tpl.name}' 도안을 삭제하시겠습니까?`)) {try {await deleteTemplateFromDB(tpl.name);setStatus(`'${tpl.name}' 도안 삭제 완료`);renderTemplateGallery(filterCategory);} catch (error) {console.error('Failed to delete template:', error);setStatus('도안 삭제 실패');}}};item.appendChild(deleteBtn);item.onclick = () => {[...el.templateGallery.children].forEach(child => child.classList.remove('active'));item.classList.add('active');const hadPaint = hasAnyPaint();const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;const imgToLoad = new Image();imgToLoad.onload = () => {importTemplate(imgToLoad, clearPaint);setStatus('도안 불러오기 완료: ' + tpl.name + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));};imgToLoad.src = tpl.data;};el.templateGallery.appendChild(item);});} catch (error) {console.error('Failed to load templates from DB:', error);setStatus('도안 불러오기 실패');}}
+  async function renderTemplateGallery() { // Adopted remote's renderTemplateGallery
+    console.log('renderTemplateGallery started.');
+    el.templateGallery.innerHTML = '';
+    try {
+      const allTemplates = await getTemplatesFromDB();
+      console.log('All templates fetched:', allTemplates.length);
+      const filteredTemplates = state.currentCategory === 'all'
+        ? allTemplates
+        : allTemplates.filter(tpl => tpl.category === state.currentCategory);
+      console.log('Filtered templates:', filteredTemplates.length);
+
+      const totalPages = Math.ceil(filteredTemplates.length / TEMPLATES_PER_PAGE);
+      state.currentPage = Math.max(1, Math.min(state.currentPage, totalPages || 1)); // Ensure current page is valid
+
+      el.templatePageInfo.textContent = `${state.currentPage} / ${totalPages || 1}`;
+      el.prevTemplatePageBtn.disabled = state.currentPage === 1;
+      el.nextTemplatePageBtn.disabled = state.currentPage === (totalPages || 1);
+
+      if (filteredTemplates.length === 0) {
+        el.templateGallery.innerHTML = '<div style="text-align:center; padding:10px; font-size:0.9em; color:#aaa;">저장된 도안이 없습니다.</div>';
+        console.log('No templates to display.');
+        return;
+      }
+
+      const startIndex = (state.currentPage - 1) * TEMPLATES_PER_PAGE;
+      const endIndex = startIndex + TEMPLATES_PER_PAGE;
+      const templatesToDisplay = filteredTemplates.slice(startIndex, endIndex);
+      console.log('Templates to display on current page:', templatesToDisplay.length);
+
+      templatesToDisplay.forEach(tpl => {
+        console.log('Rendering template:', tpl.name);
+        const item = document.createElement('div');
+        item.className = 'template-item';
+        item.dataset.name = tpl.name;
+        const img = document.createElement('img');
+        img.src = tpl.data;
+        img.alt = tpl.name;
+        item.appendChild(img);
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = tpl.name;
+        item.appendChild(nameSpan);
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.textContent = 'X';
+        deleteBtn.onclick = async (e) => {
+          e.stopPropagation();
+          if (confirm(`'${tpl.name}' 도안을 삭제하시겠습니까?`)) {
+            try {
+              await deleteTemplateFromDB(tpl.name);
+              setStatus(`'${tpl.name}' 도안 삭제 완료`);
+              renderTemplateGallery();
+            } catch (error) {
+              console.error('Failed to delete template:', error);
+              setStatus('도안 삭제 실패');
+            }
+          }
+        };
+        item.appendChild(deleteBtn);
+        item.onclick = () => {
+          // Open modal for large view
+          showModal(tpl.data);
+        };
+        item.ondblclick = () => {
+          // Existing logic for loading template to canvas
+          [...el.templateGallery.children].forEach(child => child.classList.remove('active'));
+          item.classList.add('active');
+          const hadPaint = hasAnyPaint();
+          const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;
+          const imgToLoad = new Image();
+          imgToLoad.onload = () => {
+            importTemplate(imgToLoad, clearPaint);
+            setStatus('도안 불러오기 완료: ' + tpl.name + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
+          };
+          imgToLoad.src = tpl.data;
+        };
+        el.templateGallery.appendChild(item);
+      });
+    } catch (error) {
+      console.error('Failed to load templates from DB:', error);
+      setStatus('도안 불러오기 실패');
+    }
+  }
+
+  // ===== Modal Functions =====
+  function showModal(imageUrl) {
+    console.log('showModal called with image:', imageUrl ? imageUrl.substring(0, 50) + '...' : 'null');
+    el.modalImage.src = imageUrl;
+    el.templateModal.style.display = 'flex'; // Use flex to show and center
+  }
+
+  function hideModal() {
+    console.log('hideModal called.');
+    el.templateModal.style.display = 'none';
+    el.modalImage.src = ''; // Clear image source
+  }
+
 
   // ===== Boot =====
   async function boot() {
+    console.log('Boot function started.');
     try {
       await openColoringDB();
+      console.log('IndexedDB opened.');
       setStatus('데이터베이스 준비 완료');
     } catch (error) {
       setStatus('데이터베이스 오류');
@@ -810,17 +1051,40 @@
 
     buildBrushBar();
     buildPatternBar();
-    applyToolActive(); // Call this at boot to set initial state
+    buildChildColorPalette(); // NEW: Build child color palette
+    buildCategoryButtons(); // NEW: Build category buttons
+    applyToolActive();
     attachPointer();
     window.addEventListener('resize', resizeCanvases);
 
     resizeCanvases();
 
+    // Load child mode preference
+    const savedChildMode = localStorage.getItem('isChildMode');
+    if (savedChildMode !== null) {
+      state.isChildMode = savedChildMode === 'true';
+    }
+    applyUIMode(); // NEW: Apply UI mode on initial load
+
+    // Modal event listeners
+    el.closeButton.onclick = hideModal;
+    window.onclick = (event) => {
+      if (event.target === el.templateModal) {
+        hideModal();
+      }
+    };
+    window.onkeydown = (event) => {
+      if (event.key === 'Escape') {
+        hideModal();
+      }
+    };
+
     await renderTemplateGallery();
 
-    el.categoryFilter.onchange = () => {
-      renderTemplateGallery(el.categoryFilter.value);
-    };
+    // Removed el.categoryFilter.onchange as it's replaced by buildCategoryButtons
+    // el.categoryFilter.onchange = () => {
+    //   renderTemplateGallery(el.categoryFilter.value);
+    // };
 
     setStatus('준비완료');
   }

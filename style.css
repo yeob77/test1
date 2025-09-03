@@ -1,4 +1,4 @@
-  :root { --bg:#111; --panel:#1b1b1b; --btn:#2a2a2a; --accent:#4ade80; --text:#eee; }
+:root { --bg:#111; --panel:#1b1b1b; --btn:#2a2a2a; --accent:#4ade80; --text:#eee; }
   * { box-sizing: border-box; }
   html, body { height:100%; }
   body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui, sans-serif; }
@@ -21,11 +21,12 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   gap: 10px;
-  padding: 5px;
+  padding: 50px 20px 100px;
   border: 1px solid #333;
   border-radius: 10px;
-  max-height: 300px; /* Limit height and make it scrollable */
   overflow-y: auto;
+  flex-grow: 1;
+  min-height: 0;
 }
 
 .template-item {
@@ -86,4 +87,87 @@
 
 .template-item:hover .delete-btn {
   opacity: 1; /* Show on hover */
+}
+
+/* Mode-specific visibility */
+.adult-mode-only { display: block; }
+.child-mode-only { display: none; }
+
+body.child-mode .adult-mode-only { display: none; }
+body.child-mode .child-mode-only { display: block; }
+
+/* Child Color Palette Styling */
+#childColorPalette {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid #333;
+  border-radius: 10px;
+}
+
+.color-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.color-swatch.active {
+  border-color: var(--accent);
+}
+
+/* Modal Styles */
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 100; /* Sit on top */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgba(0,0,0,0.8); /* Black w/ opacity */
+  align-items: center; /* Center vertically */
+  justify-content: center; /* Center horizontally */
+}
+
+.modal-content {
+  background-color: #1b1b1b; /* Dark background */
+  margin: auto; /* Auto margins for centering */
+  padding: 20px;
+  border: 1px solid #888;
+  width: 90%; /* Could be responsive */
+  max-width: 800px; /* Max width for larger screens */
+  max-height: 90vh; /* Max height to prevent overflow */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content img {
+  max-width: 100%;
+  max-height: 80vh; /* Adjust based on modal-content height */
+  object-fit: contain;
+}
+
+.close-button {
+  color: #aaa;
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close-button:hover,
+.close-button:focus {
+  color: #eee;
+  text-decoration: none;
+  cursor: pointer;
 }
