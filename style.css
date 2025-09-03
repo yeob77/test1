@@ -119,6 +119,30 @@ body.child-mode .child-mode-only { display: block; }
   border-color: var(--accent);
 }
 
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+  body {
+    overflow: hidden; /* Prevent body scroll on mobile */
+  }
+
+  .app {
+    grid-template-columns: 1fr; /* Single column layout */
+    grid-template-rows: auto 1fr; /* Sidebar takes auto height, stage takes rest */
+    height: 100vh; /* Full viewport height */
+  }
+
+  .sidebar {
+    width: 100%; /* Full width */
+    max-height: 40vh; /* Limit sidebar height to 40% of viewport height */
+    overflow-y: auto; /* Enable vertical scrolling for sidebar content */
+    flex-shrink: 0; /* Prevent sidebar from shrinking */
+  }
+
+  .stage {
+    height: 60vh; /* Stage takes remaining 60% of viewport height */
+  }
+}
+
 /* Modal Styles */
 .modal {
   display: none; /* Hidden by default */
