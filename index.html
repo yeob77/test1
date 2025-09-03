@@ -22,6 +22,14 @@
       <button type="button" id="tplImportBtn">도안 불러오기</button>
     </div>
     <div class="row">
+      <input type="text" id="urlInput" placeholder="도안 URL 입력"/>
+      <button type="button" id="urlImportBtn">URL로 불러오기</button>
+    </div>
+    <div class="row">
+      <label for="templateCategoryInput">카테고리:</label>
+      <input type="text" id="templateCategoryInput" value="기본" placeholder="카테고리 입력"/>
+    </div>
+    <div class="row">
       <button type="button" id="saveBtn">저장</button>
       <button type="button" id="loadBtn">불러오기</button>
       <button type="button" id="downloadBtn" title="이미지로 다운로드">⬇️</button>
@@ -30,6 +38,13 @@
     </div>
     <hr/>
     <div><strong>저장된 도안</strong></div>
+    <div class="row">
+      <label for="categoryFilter">카테고리 필터:</label>
+      <select id="categoryFilter">
+        <option value="all">모두</option>
+        <!-- Categories will be dynamically loaded here -->
+      </select>
+    </div>
     <div id="templateGallery" class="template-gallery">
       <!-- Templates will be loaded here -->
     </div>
