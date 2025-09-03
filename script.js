@@ -307,7 +307,7 @@
   // ===== Coords (Refactored) =====
   function canvasPos(e) {
     const r = base.getBoundingClientRect(); // Bounding rect of the base canvas (CSS pixels)
-    const dpr = paint.width / r.width; // Get current dpr
+    // const dpr = paint.width / r.width; // dpr is now handled by context scaling
 
     const screenX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const screenY = 'touches' in e ? e.touches[0].clientY : e.clientY;
@@ -317,10 +317,9 @@
     const cssY = screenY - r.top;
 
     // Reverse the context's pan and scale to get logical canvas coordinates (CSS pixels)
-    // Then convert to device pixels
-    const canvasX = ((cssX / state.scale) - state.panX) * dpr;
-    const canvasY = ((cssY / state.scale) - state.panY) * dpr;
-    return { x: canvasX, y: canvasY }; // These are now in device pixels
+    const canvasX = (cssX - state.panX) / state.scale; // Corrected calculation
+    const canvasY = (cssY - state.panY) / state.scale; // Corrected calculation
+    return { x: canvasX, y: canvasY }; // These are logical canvas coordinates (CSS pixels)
   }
 
   function getTouchDistance(touches) {
