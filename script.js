@@ -297,7 +297,7 @@
     const cssY = screenY - r.top;
     const canvasX = (cssX * dpr - state.panX) / state.scale;
     const canvasY = (cssY * dpr - state.panY) / state.scale;
-    return { x: Math.round(canvasX), y: Math.round(canvasY) };
+    return { x: canvasX, y: canvasY }; // Removed Math.round for better precision
   }
 
   function getTouchDistance(touches) {
