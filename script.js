@@ -123,8 +123,8 @@
 
   function applyViewTransform() {
     const dpr = paint.width / paint.getBoundingClientRect().width;
-    const cssPanX = state.panX; // state.panX is now in CSS pixels
-    const cssPanY = state.panY; // state.panY is now in CSS pixels
+    const cssPanX = state.panX / dpr;
+    const cssPanY = state.panY / dpr;
     const transform = `translate(${cssPanX}px, ${cssPanY}px) scale(${state.scale})`;
     [base, paint].forEach(cv => {
       cv.style.transformOrigin = '0 0';
@@ -295,9 +295,8 @@
     const screenY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     const cssX = screenX - r.left;
     const cssY = screenY - r.top;
-    // Now state.panX/Y are in CSS pixels
-    const canvasX = (cssX - state.panX) / state.scale * dpr; // Convert final result to device pixels
-    const canvasY = (cssY - state.panY) / state.scale * dpr; // Convert final result to device pixels
+    const canvasX = (cssX * dpr - state.panX) / state.scale;
+    const canvasY = (cssY * dpr - state.panY) / state.scale;
     return { x: canvasX, y: canvasY }; // Removed Math.round for better precision
   }
 
@@ -563,16 +562,16 @@
         const dpr = paint.width / r.width;
         
         const currentPinchCenter = getTouchCenter(e.touches, r);
-        const pcX = currentPinchCenter.x; // Pinch center in CSS pixels
-        const pcY = currentPinchCenter.y; // Pinch center in CSS pixels
+        const pcX = currentPinchCenter.x * dpr; // Pinch center in device pixels
+        const pcY = currentPinchCenter.y * dpr;
 
         // Calculate new pan based on keeping pinch center stationary
         const newPanX = pcX * (1 - newScale / state.scale) + state.panX * (newScale / state.scale);
         const newPanY = pcY * (1 - newScale / state.scale) + state.panY * (newScale / state.scale);
 
         // Adjust pan based on movement of pinch center
-        const deltaX = (currentPinchCenter.x - pinchCenter.x); // Now in CSS pixels
-        const deltaY = (currentPinchCenter.y - pinchCenter.y); // Now in CSS pixels
+        const deltaX = (currentPinchCenter.x - pinchCenter.x) * dpr;
+        const deltaY = (currentPinchCenter.y - pinchCenter.y) * dpr;
 
         state.panX = newPanX + deltaX;
         state.panY = newPanY + deltaY;
@@ -589,8 +588,8 @@
         const dpr = paint.width / paint.getBoundingClientRect().width;
         const dx = ('touches' in e ? e.touches[0].clientX : e.clientX) - panStart.x;
         const dy = ('touches' in e ? e.touches[0].clientY : e.clientY) - panStart.y;
-        state.panX = initialPan.x + dx; // Now in CSS pixels
-        state.panY = initialPan.y + dy; // Now in CSS pixels
+        state.panX = initialPan.x + dx * dpr;
+        state.panY = initialPan.y + dy * dpr;
         applyViewTransform();
         return;
       }
@@ -613,8 +612,8 @@
       e.preventDefault();
       const r = base.getBoundingClientRect();
       const dpr = paint.width / r.width;
-      const mouseX = (e.clientX - r.left); // Now in CSS pixels
-      const mouseY = (e.clientY - r.top); // Now in CSS pixels
+      const mouseX = (e.clientX - r.left) * dpr;
+      const mouseY = (e.clientY - r.top) * dpr;
 
       const scaleAmount = e.deltaY < 0 ? 1.1 : 1 / 1.1;
       const newScale = Math.max(0.2, Math.min(state.scale * scaleAmount, 10));
