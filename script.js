@@ -317,9 +317,9 @@
     const cssY = screenY - r.top;
 
     // Reverse the context's pan and scale to get logical canvas coordinates (CSS pixels)
-    const canvasX = (cssX - state.panX) / state.scale; // Corrected calculation
-    const canvasY = (cssY - state.panY) / state.scale; // Corrected calculation
-    return { x: canvasX, y: canvasY }; // These are logical canvas coordinates (CSS pixels)
+    const canvasX = (cssX / state.scale) - state.panX;
+    const canvasY = (cssY / state.scale) - state.panY;
+    return { x: canvasX, y: canvasY };
   }
 
   function getTouchDistance(touches) {
