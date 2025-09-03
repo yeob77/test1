@@ -479,7 +479,7 @@
     const i0 = (sy * W + sx) * 4;
     const target = [fd[i0], fd[i0 + 1], fd[i0 + 2], fd[i0 + 3]];
     const isBoundary = (i) => (fd[i] + fd[i + 1] + fd[i + 2]) < 80 && fd[i + 3] > 30;
-    const tol = 28;
+    const tol = 48; // Increased tolerance for better fill on anti-aliased lines
     const match = (i) => !isBoundary(i) && colorDist([fd[i], fd[i + 1], fd[i + 2], fd[i + 3]], target) <= tol;
     const mask = new Uint8Array(W * H);
     const stack = [[sx, sy]];
