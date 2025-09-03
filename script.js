@@ -647,9 +647,7 @@
       state.panY -= dy;
       state.scale = newScale;
 
-      // applyViewTransform(); // Not needed here, redraw handles transform
-      redrawBaseCanvas(); // Redraw to apply new pan/zoom
-      redrawPaintCanvas(); // Redraw to apply new pan/zoom
+      applyViewTransform();
     }
 
     paint.addEventListener('mousedown', onPointerDown);
