@@ -86,7 +86,7 @@
     'templateSelect', 'changeTemplateBtn', 'brushBar', 'patternBar', 'bucketPattern',
     'templateGallery', 'modeToggleBtn', 'childColorPalette', 'prevTemplatePageBtn',
     'nextTemplatePageBtn', 'templatePageInfo', 'tplCategory', 'templateCategoryButtons',
-    'templateModal', 'modalImage', 'closeButton'
+    'templateModal', 'modalImage', 'closeButton', 'loadTemplateFromModalBtn'
   ];
   const el = {};
   ids.forEach(i => el[i] = $(i));
@@ -1001,19 +1001,6 @@
           // Open modal for large view
           showModal(tpl.data);
         };
-        item.ondblclick = () => {
-          // Existing logic for loading template to canvas
-          [...el.templateGallery.children].forEach(child => child.classList.remove('active'));
-          item.classList.add('active');
-          const hadPaint = hasAnyPaint();
-          const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;
-          const imgToLoad = new Image();
-          imgToLoad.onload = () => {
-            importTemplate(imgToLoad, clearPaint);
-            setStatus('도안 불러오기 완료: ' + tpl.name + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
-          };
-          imgToLoad.src = tpl.data;
-        };
         el.templateGallery.appendChild(item);
       });
     } catch (error) {
@@ -1076,6 +1063,22 @@
     window.onkeydown = (event) => {
       if (event.key === 'Escape') {
         hideModal();
+      }
+    };
+
+    // NEW: Load button in modal
+    el.loadTemplateFromModalBtn.onclick = () => {
+      const imageUrl = el.modalImage.src;
+      if (imageUrl) {
+        const imgToLoad = new Image();
+        imgToLoad.onload = () => {
+          const hadPaint = hasAnyPaint();
+          const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;
+          importTemplate(imgToLoad, clearPaint);
+          setStatus('도안 불러오기 완료' + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
+          hideModal(); // Hide modal after loading
+        };
+        imgToLoad.src = imageUrl;
       }
     };
 
