@@ -122,33 +122,22 @@
   // ===== NEW: Transform & Drawing Logic (Refactored) =====
 
   function applyViewTransform() {
-    // This function will now be empty or removed, as transforms are applied directly to context
-    // However, we still need to set transformOrigin if it's used elsewhere, but for now, let's remove the transform application.
-    // The actual context transformation will happen in redrawBaseCanvas and redrawPaintCanvas.
-    // We might keep this function for future use if we decide to apply other CSS transforms.
-    // For now, let's just remove the transform application.
+    const dpr = paint.width / paint.getBoundingClientRect().width;
+    const cssPanX = state.panX; // state.panX is now in CSS pixels
+    const cssPanY = state.panY; // state.panY is now in CSS pixels
+    const transform = `translate(${cssPanX}px, ${cssPanY}px) scale(${state.scale})`;
     [base, paint].forEach(cv => {
-      cv.style.transformOrigin = '0 0'; // Keep this if needed for other CSS properties
-      cv.style.transform = 'none'; // Reset CSS transform
+      cv.style.transformOrigin = '0 0';
+      cv.style.transform = transform;
     });
   }
 
   function redrawPaintCanvas() {
       pctx.save();
-      const dpr = paint.width / paint.getBoundingClientRect().width; // Get current dpr
-      pctx.setTransform(dpr, 0, 0, dpr, 0, 0); // Apply DPR scaling
-      pctx.clearRect(0, 0, paint.width / dpr, paint.height / dpr); // Clear in CSS pixels
-      // Apply pan and scale from state
-      pctx.translate(state.panX, state.panY);
-      pctx.scale(state.scale, state.scale);
-
+      pctx.setTransform(1, 0, 0, 1, 0, 0);
+      pctx.clearRect(0, 0, paint.width, paint.height);
       const lastSnapshot = state.undo[state.undo.length - 1];
       if (lastSnapshot) {
-        // putImageData needs to be done before transformations, or handle inverse transform
-        // For simplicity, let's assume snapshot is always taken after transformations are applied
-        // or we need to draw it to a temp canvas and then draw that temp canvas.
-        // For now, let's just draw it directly, assuming it's in the correct coordinate system.
-        // If issues arise, we'll need to adjust how snapshots are taken or restored.
         pctx.putImageData(lastSnapshot, 0, 0);
       }
       pctx.restore();
@@ -156,15 +145,10 @@
 
   function redrawBaseCanvas() {
       bctx.save();
-      const dpr = base.width / base.getBoundingClientRect().width; // Get current dpr
-      bctx.setTransform(dpr, 0, 0, dpr, 0, 0); // Apply DPR scaling
-      bctx.clearRect(0, 0, base.width / dpr, base.height / dpr); // Clear in CSS pixels
-      // Apply pan and scale from state
-      bctx.translate(state.panX, state.panY);
-      bctx.scale(state.scale, state.scale);
-
+      bctx.setTransform(1, 0, 0, 1, 0, 0);
+      bctx.clearRect(0, 0, base.width, base.height);
       bctx.fillStyle = '#fff';
-      bctx.fillRect(0, 0, base.width / dpr, base.height / dpr); // Fill in CSS pixels
+      bctx.fillRect(0, 0, base.width, base.height);
       drawBaseContent();
       bctx.restore();
   }
@@ -184,18 +168,17 @@
     state.scale = 1;
     state.panX = 0;
     state.panY = 0;
-    // applyViewTransform(); // Removed as transforms are now applied directly to context
+    applyViewTransform();
 
     state.undo = [];
     state.redo = [];
     
-    redrawBaseCanvas(); // This will now apply context transform
+    redrawBaseCanvas();
     
-    // pctx.save(); // Not needed here, redrawPaintCanvas handles save/restore
-    // pctx.setTransform(1, 0, 0, 1, 0, 0); // Not needed here
-    // pctx.clearRect(0, 0, paint.width, paint.height); // Not needed here
-    // pctx.restore(); // Not needed here
-    redrawPaintCanvas(); // This will now apply context transform and clear
+    pctx.save();
+    pctx.setTransform(1, 0, 0, 1, 0, 0);
+    pctx.clearRect(0, 0, paint.width, paint.height);
+    pctx.restore();
     snapshot();
   }
 
@@ -306,20 +289,16 @@
 
   // ===== Coords (Refactored) =====
   function canvasPos(e) {
-    const r = base.getBoundingClientRect(); // Bounding rect of the base canvas (CSS pixels)
-    // const dpr = paint.width / r.width; // dpr is now handled by context scaling
-
+    const r = base.getBoundingClientRect();
+    const dpr = paint.width / r.width;
     const screenX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const screenY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-
-    // Get coordinates relative to the canvas element's CSS position
     const cssX = screenX - r.left;
     const cssY = screenY - r.top;
-
-    // Reverse the context's pan and scale to get logical canvas coordinates (CSS pixels)
-    const canvasX = (cssX / state.scale) - state.panX;
-    const canvasY = (cssY / state.scale) - state.panY;
-    return { x: canvasX, y: canvasY };
+    // Now state.panX/Y are in CSS pixels
+    const canvasX = (cssX - state.panX) / state.scale * dpr; // Convert final result to device pixels
+    const canvasY = (cssY - state.panY) / state.scale * dpr; // Convert final result to device pixels
+    return { x: canvasX, y: canvasY }; // Removed Math.round for better precision
   }
 
   function getTouchDistance(touches) {
