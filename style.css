@@ -67,6 +67,7 @@ html, body { height:100%; }
 }
 
 .tools-sidebar {
+  position: relative; /* For positioning the toggle button */
   width: 280px;
   flex-shrink: 0; /* Prevent sidebar from shrinking */
   background: var(--panel);
@@ -76,6 +77,36 @@ html, body { height:100%; }
   gap: 10px;
   overflow-y: auto;
   border-right: 1px solid #333;
+  transition: width 0.3s ease, padding 0.3s ease; /* Smooth transition */
+}
+
+.tools-sidebar.collapsed {
+  width: 0;
+  padding: 12px 0;
+  overflow: hidden;
+}
+
+#sidebarToggleBtn {
+  position: absolute;
+  top: 10px;
+  right: -15px; /* Position it just outside the sidebar */
+  z-index: 10;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid #333;
+  background: var(--btn);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: right 0.3s ease;
+}
+
+.tools-sidebar.collapsed #sidebarToggleBtn {
+  right: -20px; /* Adjust position when collapsed */
 }
 
 .stage {

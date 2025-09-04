@@ -88,6 +88,7 @@
     // Drawing View
     'toolBrush', 'toolBucket', 'toolEraser', 'toolPan', 'size', 'color', 'brushBar',
     'patternBar', 'bucketPattern', 'childColorPalette', 'undoBtn', 'redoBtn',
+    'sidebarToggleBtn',
 
     // Settings View
     'modeToggleBtn', 'zoomInBtn', 'zoomOutBtn', 'resetViewBtn', 'resetBtn',
@@ -1093,6 +1094,18 @@
     el.navGalleryBtn.onclick = () => showView('galleryView');
     el.navDrawingBtn.onclick = () => showView('drawingView');
     el.navSettingsBtn.onclick = () => showView('settingsView');
+
+    // Sidebar toggle logic
+    const sidebar = document.querySelector('.tools-sidebar');
+    if (el.sidebarToggleBtn && sidebar) {
+      el.sidebarToggleBtn.onclick = () => {
+        sidebar.classList.toggle('collapsed');
+        // Wait for the CSS transition to finish before resizing the canvas
+        setTimeout(() => {
+          resizeCanvases();
+        }, 300); // Should match the transition duration in CSS
+      };
+    }
 
     resizeCanvases();
 
