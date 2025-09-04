@@ -798,7 +798,7 @@
       if (state.isChildMode) {
         btn.textContent = btn.dataset.childIcon;
       } else {
-        btn.textContent = btn.dataset.adult-text;
+        btn.textContent = btn.dataset.adultText;
       }
     });
 
