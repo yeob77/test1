@@ -419,6 +419,22 @@
     } else if (kind === 'heart') {
       heart(s * 0.4, s * 0.4, 16); g.fill();
       heart(s * 0.75, s * 0.7, 10); g.fill();
+    } else if (kind === 'glitter') { // NEW: Glitter pattern
+      g.fillStyle = color; // Base color
+      g.fillRect(0, 0, s, s);
+
+      const numParticles = s * s / 20; // Adjust density
+      for (let i = 0; i < numParticles; i++) {
+        const x = Math.random() * s;
+        const y = Math.random() * s;
+        const size = Math.random() * 2 + 0.5; // Random size for particles
+        const alpha = Math.random() * 0.5 + 0.5; // Random alpha for particles
+
+        g.fillStyle = `rgba(255, 255, 255, ${alpha})`; // White or light color for sparkle
+        g.beginPath();
+        g.arc(x, y, size, 0, Math.PI * 2);
+        g.fill();
+      }
     }
     return c;
   }
@@ -715,7 +731,8 @@
     { id: 'dots', label: '도트', icon: '🔵' }, 
     { id: 'stripes', label: '줄무늬', icon: '💈' }, 
     { id: 'star', label: '별', icon: '⭐' }, 
-    { id: 'heart', label: '하트', icon: '❤️' }
+    { id: 'heart', label: '하트', icon: '❤️' },
+    { id: 'glitter', label: '반짝이', icon: '✨' } // NEW: Glitter pattern
   ];
 
   function buildBrushBar() {
@@ -774,7 +791,7 @@
       if (state.isChildMode) {
         btn.textContent = btn.dataset.childIcon;
       } else {
-        btn.textContent = btn.dataset.adultText;
+        btn.textContent = btn.dataset.adult-text;
       }
     });
 
