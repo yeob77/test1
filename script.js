@@ -146,6 +146,10 @@
       el.navGalleryBtn.classList.add('active');
     } else if (viewId === 'drawingView') {
       el.navDrawingBtn.classList.add('active');
+      // Call resize after the view is visible and rendered to ensure correct size
+      setTimeout(() => {
+        resizeCanvases();
+      }, 10);
     } else if (viewId === 'settingsView') {
       el.navSettingsBtn.classList.add('active');
     }
