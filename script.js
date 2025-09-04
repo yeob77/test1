@@ -1096,10 +1096,10 @@
     el.navSettingsBtn.onclick = () => showView('settingsView');
 
     // Sidebar toggle logic
-    const sidebar = document.querySelector('.tools-sidebar');
-    if (el.sidebarToggleBtn && sidebar) {
+    const drawingView = document.getElementById('drawingView');
+    if (el.sidebarToggleBtn && drawingView) {
       el.sidebarToggleBtn.onclick = () => {
-        sidebar.classList.toggle('collapsed');
+        drawingView.classList.toggle('sidebar-collapsed');
         // Wait for the CSS transition to finish before resizing the canvas
         setTimeout(() => {
           resizeCanvases();
