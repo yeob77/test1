@@ -68,31 +68,33 @@
           <canvas id="paint"></canvas>
         </div>
       </main>
-      <div><strong>툴</strong></div>
-      <div class="toolbar">
-        <button type="button" id="toolBrush" class="active" title="브러시" data-adult-text="브러시" data-child-icon="🖌️">🖌️</button>
-        <button type="button" id="toolBucket" title="채우기" data-adult-text="채우기" data-child-icon="🪣">🪣</button>
-        <button type="button" id="toolEraser" title="지우개" data-adult-text="지우개" data-child-icon="🧽">🧽</button>
-        <button type="button" id="toolPan" title="이동" data-adult-text="이동" data-child-icon="🖐️">🖐️</button>
-        <button type="button" id="zoomInBtn" title="확대" data-adult-text="확대" data-child-icon="➕">➕</button>
-        <button type="button" id="zoomOutBtn" title="축소" data-adult-text="축소" data-child-icon="➖">➖</button>
-        <button type="button" id="resetViewBtn" title="뷰 리셋" data-adult-text="원래대로" data-child-icon="🎯">원래대로</button>
-        <button type="button" id="undoBtn" title="되돌리기" data-adult-text="되돌리기" data-child-icon="↩︎">↩︎</button>
-        <button type="button" id="redoBtn" title="다시하기" data-adult-text="다시하기" data-child-icon="↪︎">↪︎</button>
-        <button type="button" id="resetBtn" title="앱 리셋" data-adult-text="앱 리셋" data-child-icon="🔄">⟲</button>
-      </div>
-      <div class="row"><label for="size">굵기</label><input id="size" type="range" min="1" max="60" value="18"/></div>
-      <div class="row adult-mode-only">
-        <label for="color">색상</label><input id="color" type="color" value="#ff7b00"/>
-      </div>
-      <div class="row child-mode-only" id="childColorPalette">
-        <!-- Child-friendly color swatches will be generated here by JavaScript -->
-      </div>
-      <div class="row"><strong>브러시 타입</strong></div>
-      <div class="row" id="brushBar"></div>
-      <div class="row"><strong>패턴</strong></div>
-      <div class="row" id="patternBar"></div>
-      <div class="row"><label><input id="bucketPattern" type="checkbox" checked/> 채우기도 패턴 사용</label></div>
+      <aside class="tools-sidebar">
+        <div><strong>툴</strong></div>
+        <div class="toolbar">
+          <button type="button" id="toolBrush" class="active" title="브러시" data-adult-text="브러시" data-child-icon="🖌️">🖌️</button>
+          <button type="button" id="toolBucket" title="채우기" data-adult-text="채우기" data-child-icon="🪣">🪣</button>
+          <button type="button" id="toolEraser" title="지우개" data-adult-text="지우개" data-child-icon="🧽">🧽</button>
+          <button type="button" id="toolPan" title="이동" data-adult-text="이동" data-child-icon="🖐️">🖐️</button>
+          <button type="button" id="zoomInBtn" title="확대" data-adult-text="확대" data-child-icon="➕">➕</button>
+          <button type="button" id="zoomOutBtn" title="축소" data-adult-text="축소" data-child-icon="➖">➖</button>
+          <button type="button" id="resetViewBtn" title="뷰 리셋" data-adult-text="원래대로" data-child-icon="🎯">원래대로</button>
+          <button type="button" id="undoBtn" title="되돌리기" data-adult-text="되돌리기" data-child-icon="↩︎">↩︎</button>
+          <button type="button" id="redoBtn" title="다시하기" data-adult-text="다시하기" data-child-icon="↪︎">↪︎</button>
+          <button type="button" id="resetBtn" title="앱 리셋" data-adult-text="앱 리셋" data-child-icon="🔄">⟲</button>
+        </div>
+        <div class="row"><label for="size">굵기</label><input id="size" type="range" min="1" max="60" value="18"/></div>
+        <div class="row adult-mode-only">
+          <label for="color">색상</label><input id="color" type="color" value="#ff7b00"/>
+        </div>
+        <div class="row child-mode-only" id="childColorPalette">
+          <!-- Child-friendly color swatches will be generated here by JavaScript -->
+        </div>
+        <div class="row"><strong>브러시 타입</strong></div>
+        <div class="row" id="brushBar"></div>
+        <div class="row"><strong>패턴</strong></div>
+        <div class="row" id="patternBar"></div>
+        <div class="row"><label><input id="bucketPattern" type="checkbox" checked/> 채우기도 패턴 사용</label></div>
+      </aside>
     </div>
     <div id="settingsView" class="view">
       <div class="status" id="status">상태: 준비</div>
