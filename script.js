@@ -238,9 +238,9 @@
   function drawBaseContent() {
     const W = base.width;
     const H = base.height;
-    // const dpr = paint.width / W; // dpr is no longer needed here
+    const dpr = paint.width / base.getBoundingClientRect().width;
     bctx.strokeStyle = '#000';
-    bctx.lineWidth = 4; // Removed dpr scaling
+    bctx.lineWidth = 4 * dpr;
     bctx.lineCap = 'round';
     bctx.lineJoin = 'round';
     const name = state.template;
@@ -338,15 +338,20 @@
   // ===== Coords (Refactored) =====
   function canvasPos(e) {
     const r = base.getBoundingClientRect();
-    // const dpr = paint.width / r.width; // dpr is no longer needed here
+    const dpr = paint.width / r.width;
+
     const screenX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const screenY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
     const cssX = screenX - r.left;
     const cssY = screenY - r.top;
-    // Coordinates are now in CSS pixels, panX/Y and scale are also in CSS pixels
-    const canvasX = (cssX - state.panX) / state.scale;
-    const canvasY = (cssY - state.panY) / state.scale;
-    return { x: canvasX, y: canvasY };
+
+    // Reverse the CSS transform to find the logical position in CSS pixels
+    const logicalCssX = (cssX - state.panX) / state.scale;
+    const logicalCssY = (cssY - state.panY) / state.scale;
+
+    // Convert to canvas resolution pixels for drawing
+    return { x: logicalCssX * dpr, y: logicalCssY * dpr };
   }
 
   function getTouchDistance(touches) {
@@ -443,14 +448,14 @@
 
   function strokeTo(x, y) {
     if (!drawing) return;
-    // const dpr = paint.width / paint.getBoundingClientRect().width; // dpr is no longer needed here
+    const dpr = paint.width / paint.getBoundingClientRect().width;
     const dx = x - lastX, dy = y - lastY;
     const dist = Math.hypot(dx, dy);
-    const step = Math.max(1, state.size * 0.45);
+    const step = Math.max(1, state.size * dpr * 0.45);
     const usePat = state.pattern !== 'none';
     const strokeStyle = usePat ? ensurePattern() : state.color;
     const fillStyle = strokeStyle;
-    pctx.lineWidth = state.size; // Removed dpr scaling
+    pctx.lineWidth = state.size * dpr;
 
     switch (state.brush) {
       case 'pen':
@@ -460,7 +465,7 @@
       case 'marker':
         pctx.save(); pctx.globalAlpha = 0.6;
         pctx.strokeStyle = strokeStyle;
-        pctx.lineWidth = state.size * 1.2; // Removed dpr scaling
+        pctx.lineWidth = state.size * dpr * 1.2;
         pctx.lineTo(x, y); pctx.stroke();
         pctx.restore();
         break;
@@ -471,7 +476,7 @@
           const ang = Math.atan2(dy, dx) - Math.PI / 6;
           pctx.translate(px, py); pctx.rotate(ang);
           pctx.beginPath(); pctx.fillStyle = fillStyle;
-          pctx.ellipse(0, 0, state.size * 0.8, state.size * 0.35, 0, 0, Math.PI * 2); // Removed dpr scaling
+          pctx.ellipse(0, 0, state.size * dpr * 0.8, state.size * dpr * 0.35, 0, 0, Math.PI * 2);
           pctx.fill(); pctx.restore();
         }
         break;
@@ -479,12 +484,12 @@
         for (let i = 0; i <= dist; i += step) {
           const px = lastX + dx * (i / dist), py = lastY + dy * (i / dist);
           for (let k = 0; k < 6; k++) {
-            const jx = (Math.random() - 0.5) * state.size * 0.4; // Removed dpr scaling
-            const jy = (Math.random() - 0.5) * state.size * 0.4; // Removed dpr scaling
+            const jx = (Math.random() - 0.5) * state.size * dpr * 0.4;
+            const jy = (Math.random() - 0.5) * state.size * dpr * 0.4;
             pctx.save(); pctx.globalAlpha = 0.35;
             pctx.fillStyle = fillStyle;
             pctx.beginPath();
-            pctx.arc(px + jx, py + jy, Math.max(1, state.size * 0.12), 0, Math.PI * 2); // Removed dpr scaling
+            pctx.arc(px + jx, py + jy, Math.max(1, state.size * dpr * 0.12), 0, Math.PI * 2);
             pctx.fill(); pctx.restore();
           }
         }
@@ -493,10 +498,10 @@
         for (let i = 0; i <= dist; i += step) {
           const px = lastX + dx * (i / dist), py = lastY + dy * (i / dist);
           pctx.save(); pctx.fillStyle = fillStyle;
-          pctx.shadowBlur = Math.max(6, state.size); // Removed dpr scaling
+          pctx.shadowBlur = Math.max(6, state.size * dpr);
           pctx.shadowColor = state.color;
           pctx.beginPath();
-          pctx.arc(px, py, state.size * 0.45, 0, Math.PI * 2); // Removed dpr scaling
+          pctx.arc(px, py, state.size * dpr * 0.45, 0, Math.PI * 2);
           pctx.fill(); pctx.restore();
         }
         break;
