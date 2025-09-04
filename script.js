@@ -10,14 +10,13 @@
 
   function openColoringDB() {
     return new Promise((resolve, reject) => {
+      showLoading(); // NEW
       const request = indexedDB.open(DB_NAME, DB_VERSION);
       request.onupgradeneeded = (event) => {
         db = event.target.result;
         let objectStore;
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'name' });
-        } else {
-          objectStore = request.transaction.objectStore(STORE_NAME);
         }
         if (!objectStore.indexNames.contains('category')) {
           objectStore.createIndex('category', 'category', { unique: false });
@@ -25,10 +24,12 @@
       };
       request.onsuccess = (event) => {
         db = event.target.result;
+        hideLoading(); // NEW
         resolve(db);
       };
       request.onerror = (event) => {
         console.error('IndexedDB error:', event.target.errorCode);
+        hideLoading(); // NEW
         reject('IndexedDB error');
       };
     });
@@ -36,16 +37,18 @@
 
   function addTemplateToDB(name, dataUrl, category = '기본') { // Kept local default param
     return new Promise((resolve, reject) => {
+      showLoading(); // NEW
       const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
       const request = store.put({ name: name, data: dataUrl, category: category });
-      request.onsuccess = () => resolve();
-      request.onerror = (event) => reject(event.target.error);
+      request.onsuccess = () => { hideLoading(); resolve(); }; // NEW
+      request.onerror = (event) => { hideLoading(); reject(event.target.error); }; // NEW
     });
   }
 
   function getTemplatesFromDB(category = 'all') {
     return new Promise((resolve, reject) => {
+      showLoading(); // NEW
       const transaction = db.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
       let request;
@@ -55,18 +58,19 @@
         const index = store.index('category');
         request = index.getAll(category);
       }
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = (event) => reject(event.target.error);
+      request.onsuccess = () => { hideLoading(); resolve(request.result); }; // NEW
+      request.onerror = (event) => { hideLoading(); reject(event.target.error); }; // NEW
     });
   }
 
   function deleteTemplateFromDB(name) {
     return new Promise((resolve, reject) => {
+      showLoading(); // NEW
       const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
       const request = store.delete(name);
-      request.onsuccess = () => resolve();
-      request.onerror = (event) => reject(event.target.error);
+      request.onsuccess = () => { hideLoading(); resolve(); }; // NEW
+      request.onerror = (event) => { hideLoading(); reject(event.target.error); }; // NEW
     });
   }
 
@@ -83,19 +87,20 @@
     'templateSelect', 'changeTemplateBtn', 'tplFile', 'tplImportBtn', 'urlInput', 'urlImportBtn',
     'tplCategory', 'prevTemplatePageBtn', 'nextTemplatePageBtn', 'templatePageInfo',
     'templateCategoryButtons', 'templateGallery', 'saveBtn', 'loadBtn', 'downloadBtn',
-    'resetBtn', // Moved here
+    'resetBtn',
 
     // Drawing View
     'toolBrush', 'toolBucket', 'toolEraser', 'toolPan', 'size', 'color', 'opacity', 'brushBar',
     'patternBar', 'bucketPattern', 'childColorPalette', 'undoBtn', 'redoBtn',
-    'sidebarToggleBtn', 'clearPaintBtn', 'wipeAllBtn', // Moved here
+    'sidebarToggleBtn', 'clearPaintBtn', 'wipeAllBtn',
 
     // Settings View
-    'modeToggleBtn', 'zoomInBtn', 'zoomOutBtn', 'resetViewBtn', 'resetBtn',
+    'modeToggleBtn', 'zoomInBtn', 'zoomOutBtn', 'resetViewBtn',
 
     // Global
     'status', 'base', 'paint', 'templateModal', 'modalImage', 'closeButton', 'loadTemplateFromModalBtn',
-    'navGalleryBtn', 'navDrawingBtn', 'navSettingsBtn' // New navigation buttons
+    'navGalleryBtn', 'navDrawingBtn', 'navSettingsBtn',
+    'toast-container', 'loading-overlay' // NEW: Toast and Loading elements
   ];
   const el = {};
   ids.forEach(i => el[i] = $(i));
@@ -109,6 +114,7 @@
     tool: 'brush',
     size: parseInt(el.size.value, 10),
     color: el.color.value,
+    opacity: 1, // NEW: Default opacity
     brush: 'pen',
     pattern: 'none',
     bucketPattern: true,
@@ -126,8 +132,27 @@
     currentView: 'galleryView' // New: Current active view
   };
 
-  function setStatus(t) {
-    statusEl.textContent = '상태: ' + t;
+  // ===== UI Feedback Functions =====
+  function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast-message ${type}`;
+    toast.textContent = message;
+    el['toast-container'].appendChild(toast);
+    setTimeout(() => {
+      toast.classList.add('show');
+    }, 10);
+    setTimeout(() => {
+      toast.classList.remove('show');
+      toast.addEventListener('transitionend', () => toast.remove());
+    }, 3000);
+  }
+
+  function showLoading() {
+    el['loading-overlay'].classList.add('show');
+  }
+
+  function hideLoading() {
+    el['loading-overlay'].classList.remove('show');
   }
 
   function showView(viewId) {
@@ -328,7 +353,7 @@
     const lastState = state.undo.pop();
     state.redo.push(lastState);
     redrawPaintCanvas();
-    setStatus('되돌리기');
+    showToast('되돌리기', 'info');
   }
 
   function redo() {
@@ -336,7 +361,7 @@
     const nextState = state.redo.pop();
     state.undo.push(nextState);
     redrawPaintCanvas();
-    setStatus('다시하기');
+    showToast('다시하기', 'info');
   }
 
   // ===== Coords (Refactored) =====
@@ -348,7 +373,7 @@
     const screenY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     
     const cssX = screenX - r.left;
-    const cssY = screenY - r.top;
+    const cssY = cssY - r.top;
 
     // Reverse the CSS transform to find the logical position in CSS pixels
     const logicalCssX = (cssX - state.panX) / state.scale;
@@ -878,7 +903,7 @@
   el.toolPan.onclick = () => { state.tool = 'pan'; applyToolActive(); setStatus('툴: 이동'); };
   el.undoBtn.onclick = undo;
   el.redoBtn.onclick = redo;
-  el.resetBtn.onclick = () => location.reload();
+  // el.resetBtn.onclick = () => location.reload(); // Moved to gallery view
 
   el.prevTemplatePageBtn.onclick = () => {
     state.currentPage--;
