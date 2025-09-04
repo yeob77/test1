@@ -459,10 +459,8 @@
     
     if (state.tool === 'eraser') {
         pctx.globalCompositeOperation = 'destination-out';
-        pctx.globalAlpha = 1; // Eraser should always be fully opaque
     } else {
         pctx.globalCompositeOperation = 'source-over';
-        pctx.globalAlpha = state.opacity; // Apply opacity for all other tools
     }
   }
 
