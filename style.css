@@ -171,3 +171,69 @@ body.child-mode .child-mode-only { display: block; }
   text-decoration: none;
   cursor: pointer;
 }
+
+#templateCategoryButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#templateCategoryButtons .pbtn {
+  font-size: 1.2em; /* Make icons a bit larger */
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .app {
+    /* Change to a single column layout with the sidebar at the bottom */
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+    height: 100vh; /* Ensure it still fills the viewport height */
+  }
+
+  .sidebar {
+    /* Make the sidebar a horizontal toolbar at the bottom */
+    grid-row: 2; /* Explicitly place it in the second row */
+    flex-direction: row; /* Arrange items horizontally */
+    flex-wrap: wrap; /* Allow items to wrap */
+    justify-content: center; /* Center the tools */
+    overflow-x: auto; /* Allow horizontal scrolling if needed */
+    overflow-y: hidden;
+    padding: 8px;
+    height: auto; /* Adjust height based on content */
+    max-height: 25vh; /* Limit the max height */
+    border-top: 1px solid #333;
+  }
+
+  .stage {
+    grid-row: 1; /* Place stage in the first row */
+    /* It will automatically take up the remaining space */
+  }
+
+  .toolbar {
+    /* Adjust toolbar for a more compact horizontal layout */
+    grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
+  }
+  
+  .template-gallery {
+    /* Make gallery scroll horizontally */
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    padding: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    max-height: 30vh; /* Allow a bit more height on very small screens */
+  }
+
+  .row, .toolbar {
+    gap: 4px; /* Reduce gap between buttons */
+  }
+
+  button, .pbtn {
+    padding: 6px;
+    min-width: 36px;
+    height: 32px;
+  }
+}
