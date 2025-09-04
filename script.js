@@ -3,7 +3,7 @@
 
   // ===== IndexedDB Setup =====
   const DB_NAME = 'ColoringBookDB';
-  const DB_VERSION = 1;
+  const DB_VERSION = 2;
   const STORE_NAME = 'templates';
   const TEMPLATES_PER_PAGE = 12; // Number of templates to display per page
   let db;
@@ -13,8 +13,14 @@
       const request = indexedDB.open(DB_NAME, DB_VERSION);
       request.onupgradeneeded = (event) => {
         db = event.target.result;
+        let objectStore;
         if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME, { keyPath: 'name' });
+          objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'name' });
+        } else {
+          objectStore = request.transaction.objectStore(STORE_NAME);
+        }
+        if (!objectStore.indexNames.contains('category')) {
+          objectStore.createIndex('category', 'category', { unique: false });
         }
       };
       request.onsuccess = (event) => {
@@ -28,7 +34,7 @@
     });
   }
 
-  function addTemplateToDB(name, dataUrl, category) {
+  function addTemplateToDB(name, dataUrl, category = '기본') { // Kept local default param
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
@@ -38,11 +44,17 @@
     });
   }
 
-  function getTemplatesFromDB() {
+  function getTemplatesFromDB(category = 'all') {
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
-      const request = store.getAll();
+      let request;
+      if (category === 'all') {
+        request = store.getAll();
+      } else {
+        const index = store.index('category');
+        request = index.getAll(category);
+      }
       request.onsuccess = () => resolve(request.result);
       request.onerror = (event) => reject(event.target.error);
     });
@@ -66,7 +78,24 @@
   const bctx = base.getContext('2d', { willReadFrequently: true });
   const pctx = paint.getContext('2d', { willReadFrequently: true });
 
-  const ids = ['clearPaintBtn', 'wipeAllBtn', 'saveBtn', 'loadBtn', 'downloadBtn', 'size', 'color', 'toolBrush', 'toolBucket', 'toolEraser', 'toolPan', 'zoomInBtn', 'zoomOutBtn', 'resetViewBtn', 'undoBtn', 'redoBtn', 'resetBtn', 'tplFile', 'tplImportBtn', 'templateSelect', 'changeTemplateBtn', 'brushBar', 'patternBar', 'bucketPattern', 'templateGallery', 'modeToggleBtn', 'childColorPalette', 'prevTemplatePageBtn', 'nextTemplatePageBtn', 'templatePageInfo', 'tplCategory', 'templateCategoryButtons', 'templateModal', 'modalImage', 'closeButton'];
+  const ids = [ // Combined local and remote IDs
+    // Gallery View
+    'templateSelect', 'changeTemplateBtn', 'tplFile', 'tplImportBtn', 'urlInput', 'urlImportBtn',
+    'tplCategory', 'prevTemplatePageBtn', 'nextTemplatePageBtn', 'templatePageInfo',
+    'templateCategoryButtons', 'templateGallery', 'saveBtn', 'loadBtn', 'downloadBtn',
+    'clearPaintBtn', 'wipeAllBtn',
+
+    // Drawing View
+    'toolBrush', 'toolBucket', 'toolEraser', 'toolPan', 'size', 'color', 'brushBar',
+    'patternBar', 'bucketPattern', 'childColorPalette', 'undoBtn', 'redoBtn',
+
+    // Settings View
+    'modeToggleBtn', 'zoomInBtn', 'zoomOutBtn', 'resetViewBtn', 'resetBtn',
+
+    // Global
+    'status', 'base', 'paint', 'templateModal', 'modalImage', 'closeButton', 'loadTemplateFromModalBtn',
+    'navGalleryBtn', 'navDrawingBtn', 'navSettingsBtn' // New navigation buttons
+  ];
   const el = {};
   ids.forEach(i => el[i] = $(i));
 
@@ -91,19 +120,41 @@
     maxUndo: 25,
     isChildMode: false,
     currentPage: 1, // Current page for template gallery
-    currentCategory: 'all' // Current selected category for gallery
+    currentCategory: 'all', // Current selected category for gallery
+    currentView: 'galleryView' // New: Current active view
   };
 
   function setStatus(t) {
     statusEl.textContent = '상태: ' + t;
   }
 
+  function showView(viewId) {
+    const views = document.querySelectorAll('.view');
+    views.forEach(view => {
+      view.classList.remove('active');
+    });
+    document.getElementById(viewId).classList.add('active');
+    state.currentView = viewId;
+
+    // Update active state of navigation buttons
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    if (viewId === 'galleryView') {
+      el.navGalleryBtn.classList.add('active');
+    } else if (viewId === 'drawingView') {
+      el.navDrawingBtn.classList.add('active');
+    } else if (viewId === 'settingsView') {
+      el.navSettingsBtn.classList.add('active');
+    }
+  }
+
   // ===== NEW: Transform & Drawing Logic (Refactored) =====
 
   function applyViewTransform() {
-    const dpr = paint.width / paint.getBoundingClientRect().width;
-    const cssPanX = state.panX / dpr;
-    const cssPanY = state.panY / dpr;
+    // const dpr = paint.width / paint.getBoundingClientRect().width; // dpr is no longer needed here
+    const cssPanX = state.panX; // panX is now in CSS pixels
+    const cssPanY = state.panY; // panY is now in CSS pixels
     const transform = `translate(${cssPanX}px, ${cssPanY}px) scale(${state.scale})`;
     [base, paint].forEach(cv => {
       cv.style.transformOrigin = '0 0';
@@ -113,10 +164,18 @@
 
   function redrawPaintCanvas() {
       pctx.save();
-      pctx.setTransform(1, 0, 0, 1, 0, 0);
-      pctx.clearRect(0, 0, paint.width, paint.height);
+      pctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+      pctx.clearRect(0, 0, paint.width, paint.height); // Clear full canvas
+      // Apply pan and scale from state (all in CSS pixels)
+      pctx.translate(state.panX, state.panY);
+      pctx.scale(state.scale, state.scale);
+
       const lastSnapshot = state.undo[state.undo.length - 1];
       if (lastSnapshot) {
+        // putImageData is not affected by transform, so we need to draw it to a temp canvas
+        // and then draw that temp canvas, or handle the inverse transform.
+        // For now, let's assume snapshots are taken in the base (untransformed) coordinate system.
+        // If not, this will need further adjustment.
         pctx.putImageData(lastSnapshot, 0, 0);
       }
       pctx.restore();
@@ -124,10 +183,13 @@
 
   function redrawBaseCanvas() {
       bctx.save();
-      bctx.setTransform(1, 0, 0, 1, 0, 0);
-      bctx.clearRect(0, 0, base.width, base.height);
+      bctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+      bctx.clearRect(0, 0, base.width, base.height); // Clear full canvas
       bctx.fillStyle = '#fff';
       bctx.fillRect(0, 0, base.width, base.height);
+      // Apply pan and scale from state (all in CSS pixels)
+      bctx.translate(state.panX, state.panY);
+      bctx.scale(state.scale, state.scale);
       drawBaseContent();
       bctx.restore();
   }
@@ -140,8 +202,8 @@
     [base, paint].forEach(cv => {
       cv.style.width = cssW + 'px';
       cv.style.height = cssH + 'px';
-      cv.width = Math.round(cssW * dpr);
-      cv.height = Math.round(cssH * dpr);
+      cv.width = Math.round(cssW * dpr); // Keep dpr for canvas internal resolution
+      cv.height = Math.round(cssH * dpr); // Keep dpr for canvas internal resolution
     });
     
     state.scale = 1;
@@ -164,9 +226,9 @@
   function drawBaseContent() {
     const W = base.width;
     const H = base.height;
-    const dpr = paint.width / W;
+    // const dpr = paint.width / W; // dpr is no longer needed here
     bctx.strokeStyle = '#000';
-    bctx.lineWidth = 4 * dpr;
+    bctx.lineWidth = 4; // Removed dpr scaling
     bctx.lineCap = 'round';
     bctx.lineJoin = 'round';
     const name = state.template;
@@ -269,14 +331,15 @@
   // ===== Coords (Refactored) =====
   function canvasPos(e) {
     const r = base.getBoundingClientRect();
-    const dpr = paint.width / r.width;
+    // const dpr = paint.width / r.width; // dpr is no longer needed here
     const screenX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const screenY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     const cssX = screenX - r.left;
     const cssY = screenY - r.top;
-    const canvasX = (cssX * dpr - state.panX) / state.scale;
-    const canvasY = (cssY * dpr - state.panY) / state.scale;
-    return { x: Math.round(canvasX), y: Math.round(canvasY) };
+    // Coordinates are now in CSS pixels, panX/Y and scale are also in CSS pixels
+    const canvasX = (cssX - state.panX) / state.scale;
+    const canvasY = (cssY - state.panY) / state.scale;
+    return { x: canvasX, y: canvasY };
   }
 
   function getTouchDistance(touches) {
@@ -297,14 +360,14 @@
   let _patternKey = '';
 
   function makePatternTile(kind, color, base = 48) {
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
-    const s = Math.round(base * dpr);
+    // const dpr = Math.max(1, window.devicePixelRatio || 1); // dpr is no longer needed here
+    const s = base; // Use base directly as size, assuming CSS pixels
     const c = document.createElement('canvas');
     c.width = s; c.height = s;
     const g = c.getContext('2d');
     g.clearRect(0, 0, s, s);
     g.fillStyle = color; g.strokeStyle = color;
-    g.lineWidth = 3 * dpr;
+    g.lineWidth = 3; // Removed dpr scaling
 
     function star(cx, cy, R, r, sp) {
       let rot = Math.PI / 2 * 3;
@@ -326,20 +389,20 @@
     }
 
     if (kind === 'dots') {
-      for (let y = 8 * dpr; y < s; y += 16 * dpr) for (let x = 8 * dpr; x < s; x += 16 * dpr) {
-        g.beginPath(); g.arc(x, y, 3 * dpr, 0, Math.PI * 2); g.fill();
+      for (let y = 8; y < s; y += 16) for (let x = 8; x < s; x += 16) {
+        g.beginPath(); g.arc(x, y, 3, 0, Math.PI * 2); g.fill();
       }
     } else if (kind === 'stripes') {
-      for (let x = 0; x < s; x += 8 * dpr) {
+      for (let x = 0; x < s; x += 8) {
         g.beginPath(); g.moveTo(x, 0); g.lineTo(x + s, s); g.stroke();
       }
     } else if (kind === 'star') {
-      star(s * 0.5, s * 0.5, 10 * dpr, 4 * dpr, 5); g.fill();
-      star(10 * dpr, 10 * dpr, 5 * dpr, 2 * dpr, 5); g.fill();
-      star(s - 10 * dpr, 12 * dpr, 5 * dpr, 2 * dpr, 5); g.fill();
+      star(s * 0.5, s * 0.5, 10, 4, 5); g.fill();
+      star(10, 10, 5, 2, 5); g.fill();
+      star(s - 10, 12, 5, 2, 5); g.fill();
     } else if (kind === 'heart') {
-      heart(s * 0.4, s * 0.4, 16 * dpr); g.fill();
-      heart(s * 0.75, s * 0.7, 10 * dpr); g.fill();
+      heart(s * 0.4, s * 0.4, 16); g.fill();
+      heart(s * 0.75, s * 0.7, 10); g.fill();
     }
     return c;
   }
@@ -373,14 +436,14 @@
 
   function strokeTo(x, y) {
     if (!drawing) return;
-    const dpr = paint.width / paint.getBoundingClientRect().width;
+    // const dpr = paint.width / paint.getBoundingClientRect().width; // dpr is no longer needed here
     const dx = x - lastX, dy = y - lastY;
     const dist = Math.hypot(dx, dy);
     const step = Math.max(1, state.size * 0.45);
     const usePat = state.pattern !== 'none';
     const strokeStyle = usePat ? ensurePattern() : state.color;
     const fillStyle = strokeStyle;
-    pctx.lineWidth = state.size * dpr;
+    pctx.lineWidth = state.size; // Removed dpr scaling
 
     switch (state.brush) {
       case 'pen':
@@ -390,7 +453,7 @@
       case 'marker':
         pctx.save(); pctx.globalAlpha = 0.6;
         pctx.strokeStyle = strokeStyle;
-        pctx.lineWidth = state.size * dpr * 1.2;
+        pctx.lineWidth = state.size * 1.2; // Removed dpr scaling
         pctx.lineTo(x, y); pctx.stroke();
         pctx.restore();
         break;
@@ -401,7 +464,7 @@
           const ang = Math.atan2(dy, dx) - Math.PI / 6;
           pctx.translate(px, py); pctx.rotate(ang);
           pctx.beginPath(); pctx.fillStyle = fillStyle;
-          pctx.ellipse(0, 0, state.size * dpr * 0.8, state.size * dpr * 0.35, 0, 0, Math.PI * 2);
+          pctx.ellipse(0, 0, state.size * 0.8, state.size * 0.35, 0, 0, Math.PI * 2); // Removed dpr scaling
           pctx.fill(); pctx.restore();
         }
         break;
@@ -409,12 +472,12 @@
         for (let i = 0; i <= dist; i += step) {
           const px = lastX + dx * (i / dist), py = lastY + dy * (i / dist);
           for (let k = 0; k < 6; k++) {
-            const jx = (Math.random() - 0.5) * state.size * dpr * 0.4;
-            const jy = (Math.random() - 0.5) * state.size * dpr * 0.4;
+            const jx = (Math.random() - 0.5) * state.size * 0.4; // Removed dpr scaling
+            const jy = (Math.random() - 0.5) * state.size * 0.4; // Removed dpr scaling
             pctx.save(); pctx.globalAlpha = 0.35;
             pctx.fillStyle = fillStyle;
             pctx.beginPath();
-            pctx.arc(px + jx, py + jy, Math.max(1, state.size * dpr * 0.12), 0, Math.PI * 2);
+            pctx.arc(px + jx, py + jy, Math.max(1, state.size * 0.12), 0, Math.PI * 2); // Removed dpr scaling
             pctx.fill(); pctx.restore();
           }
         }
@@ -423,10 +486,10 @@
         for (let i = 0; i <= dist; i += step) {
           const px = lastX + dx * (i / dist), py = lastY + dy * (i / dist);
           pctx.save(); pctx.fillStyle = fillStyle;
-          pctx.shadowBlur = Math.max(6, state.size * dpr);
+          pctx.shadowBlur = Math.max(6, state.size); // Removed dpr scaling
           pctx.shadowColor = state.color;
           pctx.beginPath();
-          pctx.arc(px, py, state.size * dpr * 0.45, 0, Math.PI * 2);
+          pctx.arc(px, py, state.size * 0.45, 0, Math.PI * 2); // Removed dpr scaling
           pctx.fill(); pctx.restore();
         }
         break;
@@ -458,7 +521,7 @@
     const i0 = (sy * W + sx) * 4;
     const target = [fd[i0], fd[i0 + 1], fd[i0 + 2], fd[i0 + 3]];
     const isBoundary = (i) => (fd[i] + fd[i + 1] + fd[i + 2]) < 80 && fd[i + 3] > 30;
-    const tol = 28;
+    const tol = 120; // Significantly increased tolerance for anti-aliased lines to eliminate white margins
     const match = (i) => !isBoundary(i) && colorDist([fd[i], fd[i + 1], fd[i + 2], fd[i + 3]], target) <= tol;
     const mask = new Uint8Array(W * H);
     const stack = [[sx, sy]];
@@ -538,19 +601,19 @@
         const newTouchDistance = getTouchDistance(e.touches);
         const scaleFactor = newTouchDistance / lastTouchDistance;
         const newScale = Math.max(0.2, Math.min(state.scale * scaleFactor, 10));
-        const dpr = paint.width / r.width;
+        // const dpr = paint.width / r.width; // dpr is no longer needed here
         
         const currentPinchCenter = getTouchCenter(e.touches, r);
-        const pcX = currentPinchCenter.x * dpr; // Pinch center in device pixels
-        const pcY = currentPinchCenter.y * dpr;
+        const pcX = currentPinchCenter.x; // Pinch center in CSS pixels
+        const pcY = currentPinchCenter.y; // Pinch center in CSS pixels
 
         // Calculate new pan based on keeping pinch center stationary
         const newPanX = pcX * (1 - newScale / state.scale) + state.panX * (newScale / state.scale);
         const newPanY = pcY * (1 - newScale / state.scale) + state.panY * (newScale / state.scale);
 
         // Adjust pan based on movement of pinch center
-        const deltaX = (currentPinchCenter.x - pinchCenter.x) * dpr;
-        const deltaY = (currentPinchCenter.y - pinchCenter.y) * dpr;
+        const deltaX = (currentPinchCenter.x - pinchCenter.x); // in CSS pixels
+        const deltaY = (currentPinchCenter.y - pinchCenter.y); // in CSS pixels
 
         state.panX = newPanX + deltaX;
         state.panY = newPanY + deltaY;
@@ -564,11 +627,11 @@
 
       if (panning) {
         e.preventDefault();
-        const dpr = paint.width / paint.getBoundingClientRect().width;
+        // const dpr = paint.width / paint.getBoundingClientRect().width; // dpr is no longer needed here
         const dx = ('touches' in e ? e.touches[0].clientX : e.clientX) - panStart.x;
         const dy = ('touches' in e ? e.touches[0].clientY : e.clientY) - panStart.y;
-        state.panX = initialPan.x + dx * dpr;
-        state.panY = initialPan.y + dy * dpr;
+        state.panX = initialPan.x + dx; // in CSS pixels
+        state.panY = initialPan.y + dy; // in CSS pixels
         applyViewTransform();
         return;
       }
@@ -590,9 +653,9 @@
     function handleWheel(e) {
       e.preventDefault();
       const r = base.getBoundingClientRect();
-      const dpr = paint.width / r.width;
-      const mouseX = (e.clientX - r.left) * dpr;
-      const mouseY = (e.clientY - r.top) * dpr;
+      // const dpr = paint.width / r.width; // dpr is no longer needed here
+      const mouseX = (e.clientX - r.left); // in CSS pixels
+      const mouseY = (e.clientY - r.top); // in CSS pixels
 
       const scaleAmount = e.deltaY < 0 ? 1.1 : 1 / 1.1;
       const newScale = Math.max(0.2, Math.min(state.scale * scaleAmount, 10));
@@ -829,7 +892,7 @@
   el.downloadBtn.onclick = () => { const W = base.width; const H = base.height; const tempCanvas = document.createElement('canvas'); tempCanvas.width = W; tempCanvas.height = H; const tempCtx = tempCanvas.getContext('2d'); tempCtx.fillStyle = '#fff'; tempCtx.fillRect(0, 0, W, H); tempCtx.drawImage(base, 0, 0); tempCtx.drawImage(paint, 0, 0); const link = document.createElement('a'); link.download = 'coloring-art.png'; link.href = tempCanvas.toDataURL('image/png'); link.click(); setStatus('이미지 다운로드 시작'); };
   el.tplImportBtn.onclick = () => el.tplFile.click();
   el.tplFile.onchange = (e) => { const f = e.target.files && e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { const img = new Image(); img.onload = async () => { const templateName = f.name.split('.').slice(0, -1).join('.') || 'untitled';
-        const selectedCategory = el.tplCategory.value; // Get selected category
+        const selectedCategory = el.tplCategory.value; // Get selected category from remote's new select
         try {
           await addTemplateToDB(templateName, r.result, selectedCategory); // Pass category
           setStatus('도안 저장 완료: ' + templateName);
@@ -838,10 +901,65 @@
           const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;
           importTemplate(img, clearPaint);
           setStatus('도안 불러오기 완료' + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
+          showView('drawingView'); // Switch to drawing view
         } catch (error) {
           console.error('Failed to save template to DB:', error);
           setStatus('도안 저장 실패');
         } }; img.src = r.result; }; r.readAsDataURL(f); };
+
+  async function importImageFromUrl(url) {
+    if (!url) {
+        setStatus('URL을 입력해주세요.');
+        return;
+    }
+    setStatus('URL에서 도안 불러오는 중...');
+    try {
+        const response = await fetch(url); // Reverted from proxy
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onload = async () => {
+            const img = new Image();
+            img.onload = async () => {
+                const templateName = url.substring(url.lastIndexOf('/') + 1).split('?')[0].split('#')[0] || 'untitled_url'; // Extract name from URL, remove query/hash
+                const category = el.tplCategory.value; // Use remote's new select for category
+                try {
+                    await addTemplateToDB(templateName, reader.result, category);
+                    setStatus('도안 저장 완료: ' + templateName + ' (카테고리: ' + category + ')');
+                    await renderTemplateGallery();
+                    const hadPaint = hasAnyPaint();
+                    const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;
+                    importTemplate(img, clearPaint);
+                    setStatus('도안 불러오기 완료' + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
+                    showView('drawingView'); // Switch to drawing view
+                } catch (error) {
+                    console.error('Failed to save template to DB:', error);
+                    setStatus('도안 저장 실패');
+                }
+            };
+            img.onerror = () => {
+                setStatus('이미지 로드 실패: 유효한 이미지 URL이 아닙니다.');
+                console.error('Image load error from URL:', url);
+            };
+            img.src = reader.result;
+        };
+        reader.onerror = (error) => {
+            setStatus('파일 읽기 오류');
+            console.error('FileReader error:', error);
+        };
+        reader.readAsDataURL(blob);
+    } catch (error) {
+        setStatus('도안 불러오기 실패: ' + error.message);
+        console.error('Failed to fetch image from URL:', error);
+    }
+  }
+
+  el.urlImportBtn.onclick = () => {
+    const url = el.urlInput.value.trim();
+    importImageFromUrl(url);
+  };
   
   el.changeTemplateBtn.onclick = () => {
     const hadPaint = hasAnyPaint();
@@ -863,9 +981,10 @@
     snapshot();
 
     setStatus('도안 변경: ' + state.template + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
+    showView('drawingView'); // Switch to drawing view
   };
 
-  async function renderTemplateGallery() {
+  async function renderTemplateGallery() { // Adopted remote's renderTemplateGallery
     console.log('renderTemplateGallery started.');
     el.templateGallery.innerHTML = '';
     try {
@@ -927,19 +1046,6 @@
           // Open modal for large view
           showModal(tpl.data);
         };
-        item.ondblclick = () => {
-          // Existing logic for loading template to canvas
-          [...el.templateGallery.children].forEach(child => child.classList.remove('active'));
-          item.classList.add('active');
-          const hadPaint = hasAnyPaint();
-          const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;
-          const imgToLoad = new Image();
-          imgToLoad.onload = () => {
-            importTemplate(imgToLoad, clearPaint);
-            setStatus('도안 불러오기 완료: ' + tpl.name + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
-          };
-          imgToLoad.src = tpl.data;
-        };
         el.templateGallery.appendChild(item);
       });
     } catch (error) {
@@ -983,6 +1089,11 @@
     attachPointer();
     window.addEventListener('resize', resizeCanvases);
 
+    // Attach navigation button listeners
+    el.navGalleryBtn.onclick = () => showView('galleryView');
+    el.navDrawingBtn.onclick = () => showView('drawingView');
+    el.navSettingsBtn.onclick = () => showView('settingsView');
+
     resizeCanvases();
 
     // Load child mode preference
@@ -1005,7 +1116,32 @@
       }
     };
 
+    // NEW: Load button in modal
+    el.loadTemplateFromModalBtn.onclick = () => {
+      const imageUrl = el.modalImage.src;
+      if (imageUrl) {
+        const imgToLoad = new Image();
+        imgToLoad.onload = () => {
+          const hadPaint = hasAnyPaint();
+          const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;
+          importTemplate(imgToLoad, clearPaint);
+          setStatus('도안 불러오기 완료' + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
+          hideModal(); // Hide modal after loading
+          showView('drawingView'); // Switch to drawing view
+        };
+        imgToLoad.src = imageUrl;
+      }
+    };
+
     await renderTemplateGallery();
+
+    // Removed el.categoryFilter.onchange as it's replaced by buildCategoryButtons
+    // el.categoryFilter.onchange = () => {
+    //   renderTemplateGallery(el.categoryFilter.value);
+    // };
+
+    // Show the initial view
+    showView(state.currentView);
 
     setStatus('준비완료');
   }
