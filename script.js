@@ -459,8 +459,10 @@
     
     if (state.tool === 'eraser') {
         pctx.globalCompositeOperation = 'destination-out';
+        pctx.globalAlpha = 1; // Eraser should always be fully opaque
     } else {
         pctx.globalCompositeOperation = 'source-over';
+        pctx.globalAlpha = state.opacity; // Apply opacity for all other tools
     }
   }
 
@@ -481,6 +483,13 @@
     const strokeStyle = usePat ? ensurePattern() : state.color;
     const fillStyle = strokeStyle;
     pctx.lineWidth = state.size * dpr;
+
+    // Set globalAlpha here, it will apply to all drawing operations within this stroke
+    if (state.tool === 'eraser') {
+        pctx.globalAlpha = 1;
+    } else {
+        pctx.globalAlpha = state.opacity;
+    }
 
     switch (state.brush) {
       case 'pen':
@@ -860,7 +869,12 @@
   };
   el.toolBrush.onclick = () => { state.tool = 'brush'; applyToolActive(); setStatus('툴: 브러시'); };
   el.toolBucket.onclick = () => { state.tool = 'bucket'; applyToolActive(); setStatus('툴: 채우기'); };
-  el.toolEraser.onclick = () => { state.tool = 'eraser'; applyToolActive(); setStatus('툴: 지우개'); };
+  el.toolEraser.onclick = () => {
+    state.tool = 'eraser';
+    applyToolActive();
+    setStatus('툴: 지우개');
+    pctx.globalAlpha = 1; // Ensure eraser is fully opaque
+};
   el.toolPan.onclick = () => { state.tool = 'pan'; applyToolActive(); setStatus('툴: 이동'); };
   el.undoBtn.onclick = undo;
   el.redoBtn.onclick = redo;
