@@ -113,6 +113,7 @@
     pattern: 'none',
     bucketPattern: true,
     template: 'flower',
+    currentBaseImage: null, // NEW: To store the loaded image object
     scale: 1,
     panX: 0,
     panY: 0,
@@ -184,14 +185,24 @@
 
   function redrawBaseCanvas() {
       bctx.save();
-      bctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
-      bctx.clearRect(0, 0, base.width, base.height); // Clear full canvas
+      bctx.setTransform(1, 0, 0, 1, 0, 0);
+      bctx.clearRect(0, 0, base.width, base.height);
       bctx.fillStyle = '#fff';
       bctx.fillRect(0, 0, base.width, base.height);
-      // Apply pan and scale from state (all in CSS pixels)
-      bctx.translate(state.panX, state.panY);
-      bctx.scale(state.scale, state.scale);
-      drawBaseContent();
+
+      if (state.currentBaseImage) {
+          const img = state.currentBaseImage;
+          const W = base.width;
+          const H = base.height;
+          const s = Math.min(W / img.width, H / img.height);
+          const dw = img.width * s;
+          const dh = img.height * s;
+          const dx = (W - dw) / 2;
+          const dy = (H - dh) / 2;
+          bctx.drawImage(img, dx, dy, dw, dh);
+      } else {
+          drawBaseContent();
+      }
       bctx.restore();
   }
   
@@ -283,15 +294,10 @@
   }
 
   function importTemplate(img, clearPaint) {
-    redrawBaseCanvas();
-    const W = base.width, H = base.height;
-    bctx.clearRect(0, 0, W, H);
-    bctx.fillStyle = '#fff';
-    bctx.fillRect(0, 0, W, H);
-    const s = Math.min(W / img.width, H / img.height);
-    const dw = img.width * s, dh = img.height * s;
-    const dx = (W - dw) / 2, dy = (H - dh) / 2;
-    bctx.drawImage(img, dx, dy, dw, dh);
+    state.currentBaseImage = img; // Store the loaded image object
+    state.template = 'custom'; // Mark that we are using a custom image
+    redrawBaseCanvas(); // Redraw the base canvas with the new image
+
     if (clearPaint) {
       pctx.clearRect(0, 0, paint.width, paint.height);
       snapshot();
@@ -965,6 +971,8 @@
   el.changeTemplateBtn.onclick = () => {
     const hadPaint = hasAnyPaint();
     const clearPaint = hadPaint ? confirm('도안을 변경합니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;
+    
+    state.currentBaseImage = null; // Clear any custom loaded image
     state.template = el.templateSelect.value;
     
     state.scale = 1;
