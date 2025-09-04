@@ -86,7 +86,7 @@
     'clearPaintBtn', 'wipeAllBtn',
 
     // Drawing View
-    'toolBrush', 'toolBucket', 'toolEraser', 'toolPan', 'size', 'color', 'brushBar',
+    'toolBrush', 'toolBucket', 'toolEraser', 'toolPan', 'size', 'color', 'opacity', 'brushBar',
     'patternBar', 'bucketPattern', 'childColorPalette', 'undoBtn', 'redoBtn',
     'sidebarToggleBtn',
 
@@ -440,7 +440,14 @@
     pctx.save();
     pctx.beginPath(); pctx.moveTo(x, y);
     pctx.lineCap = 'round'; pctx.lineJoin = 'round';
-    pctx.globalCompositeOperation = (state.tool === 'eraser') ? 'destination-out' : 'source-over';
+    
+    if (state.tool === 'eraser') {
+        pctx.globalCompositeOperation = 'destination-out';
+        pctx.globalAlpha = 1; // Eraser should always be fully opaque
+    } else {
+        pctx.globalCompositeOperation = 'source-over';
+        pctx.globalAlpha = state.opacity; // Apply opacity for all other tools
+    }
   }
 
   function endStroke() {
@@ -824,6 +831,7 @@
 
   // ===== Event Listeners =====
   el.size.oninput = () => state.size = parseInt(el.size.value, 10) || 1;
+  el.opacity.oninput = () => state.opacity = parseFloat(el.opacity.value) || 1; // NEW
   el.color.oninput = () => {
     if (!state.isChildMode) { // Only allow adult color input in adult mode
       state.color = el.color.value;
