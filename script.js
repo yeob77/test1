@@ -696,15 +696,27 @@
   }
 
   // ===== UI wiring =====
-  const brushes = [{ id: 'pen', label: '펜' }, { id: 'marker', label: '마커' }, { id: 'calligraphy', label: '캘리' }, { id: 'crayon', label: '크레용' }, { id: 'neon', label: '네온' }];
-  const patterns = [{ id: 'none', label: '단색' }, { id: 'dots', label: '도트' }, { id: 'stripes', label: '줄무늬' }, { id: 'star', label: '별' }, { id: 'heart', label: '하트' }];
+  const brushes = [
+    { id: 'pen', label: '펜', icon: '🖊️' }, 
+    { id: 'marker', label: '마커', icon: '🖍️' }, 
+    { id: 'calligraphy', label: '캘리', icon: '✒️' }, 
+    { id: 'crayon', label: '크레용', icon: '✏️' }, 
+    { id: 'neon', label: '네온', icon: '✨' }
+  ];
+  const patterns = [
+    { id: 'none', label: '단색', icon: '⬜️' }, 
+    { id: 'dots', label: '도트', icon: '🔵' }, 
+    { id: 'stripes', label: '줄무늬', icon: '💈' }, 
+    { id: 'star', label: '별', icon: '⭐' }, 
+    { id: 'heart', label: '하트', icon: '❤️' }
+  ];
 
   function buildBrushBar() {
     el.brushBar.innerHTML = '';
     brushes.forEach(b => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.textContent = b.label;
+      btn.textContent = state.isChildMode ? b.icon : b.label;
       btn.className = 'pbtn' + (state.brush === b.id ? ' active' : '');
       btn.onclick = () => {
         state.brush = b.id;
@@ -721,7 +733,7 @@
     patterns.forEach(p => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.textContent = p.label;
+      btn.textContent = state.isChildMode ? p.icon : p.label;
       btn.className = 'pbtn' + (state.pattern === p.id ? ' active' : '');
       btn.onclick = () => {
         state.pattern = p.id;
@@ -750,7 +762,7 @@
     // Update mode toggle button text
     el.modeToggleBtn.textContent = state.isChildMode ? '성인 모드' : '어린이 모드';
 
-    // Update button text/icons
+    // Update button text/icons for static buttons
     document.querySelectorAll('[data-adult-text]').forEach(btn => {
       if (state.isChildMode) {
         btn.textContent = btn.dataset.childIcon;
@@ -758,6 +770,10 @@
         btn.textContent = btn.dataset.adultText;
       }
     });
+
+    // Re-build dynamic toolbars
+    buildBrushBar();
+    buildPatternBar();
 
     // Manage color picker visibility and child color palette
     if (state.isChildMode) {
