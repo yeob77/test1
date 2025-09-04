@@ -901,6 +901,7 @@
           const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;
           importTemplate(img, clearPaint);
           setStatus('도안 불러오기 완료' + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
+          showView('drawingView'); // Switch to drawing view
         } catch (error) {
           console.error('Failed to save template to DB:', error);
           setStatus('도안 저장 실패');
@@ -932,6 +933,7 @@
                     const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;
                     importTemplate(img, clearPaint);
                     setStatus('도안 불러오기 완료' + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
+                    showView('drawingView'); // Switch to drawing view
                 } catch (error) {
                     console.error('Failed to save template to DB:', error);
                     setStatus('도안 저장 실패');
@@ -979,6 +981,7 @@
     snapshot();
 
     setStatus('도안 변경: ' + state.template + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
+    showView('drawingView'); // Switch to drawing view
   };
 
   async function renderTemplateGallery() { // Adopted remote's renderTemplateGallery
@@ -1124,6 +1127,7 @@
           importTemplate(imgToLoad, clearPaint);
           setStatus('도안 불러오기 완료' + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
           hideModal(); // Hide modal after loading
+          showView('drawingView'); // Switch to drawing view
         };
         imgToLoad.src = imageUrl;
       }
