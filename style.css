@@ -47,6 +47,7 @@ html, body { height:100%; }
 
 .view {
   display: none;
+  flex-direction: column; /* Set default direction to vertical */
   width: 100%;
   flex-grow: 1;
   overflow-y: auto;
