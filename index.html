@@ -44,8 +44,7 @@
         <button type="button" id="saveBtn" data-adult-text="저장" data-child-icon="💾">저장</button>
         <button type="button" id="loadBtn" data-adult-text="불러오기" data-child-icon="📂">불러오기</button>
         <button type="button" id="downloadBtn" title="이미지로 다운로드" data-adult-text="이미지로 다운로드" data-child-icon="⬇️">⬇️</button>
-        <button type="button" id="clearPaintBtn" data-adult-text="지우기(채색만)" data-child-icon="🧹">지우기(채색만)</button>
-        <button type="button" id="wipeAllBtn" data-adult-text="전체 삭제(백지)" data-child-icon="🗑️">전체 삭제(백지)</button>
+        <button type="button" id="resetBtn" title="앱 리셋" data-adult-text="앱 리셋" data-child-icon="🔄">⟲</button>
       </div>
       <hr/>
       <div><strong>저장된 도안</strong></div>
@@ -81,10 +80,9 @@
           <button type="button" id="resetViewBtn" title="뷰 리셋" data-adult-text="원래대로" data-child-icon="🎯">원래대로</button>
           <button type="button" id="undoBtn" title="되돌리기" data-adult-text="되돌리기" data-child-icon="↩︎">↩︎</button>
           <button type="button" id="redoBtn" title="다시하기" data-adult-text="다시하기" data-child-icon="↪︎">↪︎</button>
-          <button type="button" id="resetBtn" title="앱 리셋" data-adult-text="앱 리셋" data-child-icon="🔄">⟲</button>
         </div>
         <div class="row"><label for="size">굵기</label><input id="size" type="range" min="1" max="60" value="18"/></div>
-        <div class="row"><label for="opacity">투명도</label><input id="opacity" type="range" min="0" max="1" step="0.05" value="1"/></div>
+        <div class="row"><label for="opacity">투명도</label><input id="opacity" type="range" min="0" max="100" step="1" value="100"/></div>
         <div class="row adult-mode-only">
           <label for="color">색상</label><input id="color" type="color" value="#ff7b00"/>
         </div>
@@ -96,6 +94,10 @@
         <div class="row"><strong>패턴</strong></div>
         <div class="row" id="patternBar"></div>
         <div class="row"><label><input id="bucketPattern" type="checkbox" checked/> 채우기도 패턴 사용</label></div>
+        <div class="row">
+          <button type="button" id="clearPaintBtn" data-adult-text="지우기(채색만)" data-child-icon="🧹">지우기(채색만)</button>
+          <button type="button" id="wipeAllBtn" data-adult-text="전체 삭제(백지)" data-child-icon="🗑️">전체 삭제(백지)</button>
+        </div>
       </aside>
     </div>
     <div id="settingsView" class="view">

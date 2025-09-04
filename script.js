@@ -83,12 +83,12 @@
     'templateSelect', 'changeTemplateBtn', 'tplFile', 'tplImportBtn', 'urlInput', 'urlImportBtn',
     'tplCategory', 'prevTemplatePageBtn', 'nextTemplatePageBtn', 'templatePageInfo',
     'templateCategoryButtons', 'templateGallery', 'saveBtn', 'loadBtn', 'downloadBtn',
-    'clearPaintBtn', 'wipeAllBtn',
+    'resetBtn', // Moved here
 
     // Drawing View
     'toolBrush', 'toolBucket', 'toolEraser', 'toolPan', 'size', 'color', 'opacity', 'brushBar',
     'patternBar', 'bucketPattern', 'childColorPalette', 'undoBtn', 'redoBtn',
-    'sidebarToggleBtn',
+    'sidebarToggleBtn', 'clearPaintBtn', 'wipeAllBtn', // Moved here
 
     // Settings View
     'modeToggleBtn', 'zoomInBtn', 'zoomOutBtn', 'resetViewBtn', 'resetBtn',
