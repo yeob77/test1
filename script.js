@@ -490,7 +490,7 @@
         pctx.lineTo(x, y); pctx.stroke();
         break;
       case 'marker':
-        pctx.save(); pctx.globalAlpha = 0.6;
+        pctx.save();
         pctx.strokeStyle = strokeStyle;
         pctx.lineWidth = state.size * dpr * 1.2;
         pctx.lineTo(x, y); pctx.stroke();
@@ -513,7 +513,7 @@
           for (let k = 0; k < 6; k++) {
             const jx = (Math.random() - 0.5) * state.size * dpr * 0.4;
             const jy = (Math.random() - 0.5) * state.size * dpr * 0.4;
-            pctx.save(); pctx.globalAlpha = 0.35;
+            pctx.save();
             pctx.fillStyle = fillStyle;
             pctx.beginPath();
             pctx.arc(px + jx, py + jy, Math.max(1, state.size * dpr * 0.12), 0, Math.PI * 2);
