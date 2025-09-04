@@ -848,7 +848,7 @@
 
   // ===== Event Listeners =====
   el.size.oninput = () => state.size = parseInt(el.size.value, 10) || 1;
-  el.opacity.oninput = () => state.opacity = parseFloat(el.opacity.value) / 100; // Scale to 0-1 range
+  el.opacity.oninput = () => state.opacity = Math.sqrt(parseFloat(el.opacity.value) / 100); // Apply square root for perceptual linearity
   el.color.oninput = () => {
     if (!state.isChildMode) { // Only allow adult color input in adult mode
       state.color = el.color.value;
