@@ -461,13 +461,14 @@ el.loadBtn.onclick = () => {
   const url = localStorage.getItem('coloring.save'); 
   if (!url) { showToast('저장본 없음', 'info'); return; } 
   const img = new Image(); 
-  img.onload = () => 
+  img.onload = () => {
     const W = el.base.width, H = el.base.height;
     const bctx = el.base.getContext('2d', { willReadFrequently: true });
     const pctx = el.paint.getContext('2d', { willReadFrequently: true });
     bctx.clearRect(0, 0, W, H); 
     pctx.clearRect(0, 0, el.paint.width, el.paint.height); 
-    bctx.drawImage(img, 0, 0, W, H); 
+    bctx.drawImage(img, 0, 0, W, H);
+  }; 
     showToast('불러오기 완료(합성본을 도안으로 올림)'); 
   }; 
   img.src = url; 
