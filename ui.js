@@ -716,8 +716,10 @@ async function boot() {
     if (imageUrl) {
       const imgToLoad = new Image();
       imgToLoad.onload = () => {
-        // Simplified content for debugging
-        showToast('도안 불러오기 시작');
+        const hadPaint = hasAnyPaint(); // Check if there's any paint
+        const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;
+        importTemplate(imgToLoad, clearPaint); // <-- Add this line
+        showToast('도안 불러오기 완료' + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)')); // Update toast message
         hideModal();
         showView('drawingView');
       };

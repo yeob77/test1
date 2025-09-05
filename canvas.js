@@ -55,7 +55,7 @@ export function redrawBaseCanvas() {
     const dy = (H - dh) / 2;
     bctx.drawImage(img, dx, dy, dw, dh);
   } else {
-    // No default content to draw
+    drawBaseContent(); // Call drawBaseContent here
   }
   bctx.restore();
 }
@@ -63,8 +63,8 @@ export function redrawBaseCanvas() {
 export function resizeCanvases() {
   const dpr = Math.max(1, window.devicePixelRatio || 1);
   const box = el.base.parentElement.getBoundingClientRect();
-  const cssW = Math.max(600, box.width);
-  const cssH = Math.max(400, box.height);
+  const cssW = box.width;
+  const cssH = box.height;
   [el.base, el.paint].forEach(cv => {
     cv.style.width = cssW + 'px';
     cv.style.height = cssH + 'px';
@@ -286,8 +286,7 @@ export function strokeTo(x, y) {
       pctx.save();
       pctx.strokeStyle = strokeStyle;
       pctx.lineWidth = state.size * dpr * 1.2;
-      pctx.lineTo(x, y); pctx.stroke();
-      pctx.restore();
+      pctx.lineTo(x, y); pctx.restore();
       break;
     case 'calligraphy':
       for (let i = 0; i <= dist; i += step) {
@@ -390,4 +389,62 @@ export function bucketFill(sx, sy) {
   }
   pctx.putImageData(pd, 0, 0);
   snapshot();
+}
+
+function drawBaseContent() {
+  const W = el.base.width;
+  const H = el.base.height;
+  const dpr = el.paint.width / el.base.getBoundingClientRect().width;
+  bctx.strokeStyle = '#000';
+  bctx.lineWidth = 4 * dpr;
+  bctx.lineCap = 'round';
+  bctx.lineJoin = 'round';
+  const name = state.template;
+  if (name === 'flower') {
+    bctx.beginPath();
+    bctx.arc(W * 0.5, H * 0.5, Math.min(W, H) * 0.09, 0, Math.PI * 2);
+    bctx.stroke();
+    for (let i = 0; i < 8; i++) {
+      const a = i / 8 * Math.PI * 2;
+      const x = W * 0.5 + Math.cos(a) * Math.min(W, H) * 0.25;
+      const y = H * 0.5 + Math.sin(a) * Math.min(W, H) * 0.25;
+      bctx.beginPath();
+      bctx.ellipse(x, y, Math.min(W, H) * 0.07, Math.min(W, H) * 0.11, a, 0, Math.PI * 2);
+      bctx.stroke();
+    }
+    bctx.beginPath();
+    bctx.moveTo(W * 0.5, H * 0.5 + Math.min(W, H) * 0.1);
+    bctx.lineTo(W * 0.5, H * 0.9);
+    bctx.stroke();
+  } else if (name === 'house') {
+    const bw = Math.min(W, H) * 0.45;
+    const bx = W * 0.5 - bw / 2;
+    const by = H * 0.5;
+    bctx.strokeRect(bx, by, bw, bw * 0.7);
+    bctx.beginPath();
+    bctx.moveTo(bx - 20, by);
+    bctx.lineTo(W * 0.5, by - bw * 0.35);
+    bctx.lineTo(bx + bw + 20, by);
+    bctx.closePath();
+    bctx.stroke();
+    bctx.strokeRect(bx + bw * 0.25, by + bw * 0.2, bw * 0.2, bw * 0.2);
+    bctx.strokeRect(bx + bw * 0.65, by + bw * 0.3, bw * 0.12, bw * 0.4);
+  } else if (name === 'fish') {
+    const rx = W * 0.48,
+      ry = H * 0.5,
+      rw = Math.min(W, H) * 0.36,
+      rh = Math.min(W, H) * 0.2;
+    bctx.beginPath();
+    bctx.ellipse(rx, ry, rw, rh, 0, 0, Math.PI * 2);
+    bctx.stroke();
+    bctx.beginPath();
+    bctx.moveTo(rx + rw, ry);
+    bctx.lineTo(rx + rw + rh, ry - rh * 0.5);
+    bctx.lineTo(rx + rw + rh, ry + rh * 0.5);
+    bctx.closePath();
+    bctx.stroke();
+    bctx.beginPath();
+    bctx.arc(rx - rw * 0.5, ry - rh * 0.25, rh * 0.12, 0, Math.PI * 2);
+    bctx.stroke();
+  }
 }
