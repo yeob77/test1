@@ -1,4 +1,4 @@
-import { openColoringDB, addTemplateToDB, getTemplatesFromDB, deleteTemplateFromDB } from './db.js';
+import { openColoringDB, addTemplateToDB, getTemplatesFromDB, deleteTemplateFromDB, updateTemplateCategoryInDB, getCategoriesFromDB } from './db.js';
 import { initCanvas, resizeCanvases, undo, redo, applyViewTransform, importTemplate, bucketFill, beginStroke, endStroke, strokeTo, canvasPos, getTouchDistance, getTouchCenter, redrawBaseCanvas } from './canvas.js';
 
 const TEMPLATES_PER_PAGE = 12; // Number of templates to display per page
@@ -501,7 +501,7 @@ el.tplFile.onchange = (e) => {
   const r = new FileReader(); 
   r.onload = async () => { 
     const img = new Image(); 
-    img.onload = async () => { 
+    img.onload = async () => {
       const templateName = f.name.split('.').slice(0, -1).join('.') || 'untitled';
       const selectedCategory = el.tplCategory.value;
       try {
@@ -834,56 +834,6 @@ async function boot() {
             } catch (error) {
               console.error('Failed to delete category:', error);
               showToast('카테고리 불러오기 실패', 'error');
-            }
-          }
-        };
-        el.categoryList.appendChild(item);
-      });
-    } catch (error) {
-      console.error('Failed to load categories:', error);
-      showToast('카테고리 불러오기 실패', 'error');
-    }
-  }
-              }
-              showToast(`카테고리 '${cat.name}' 삭제 완료`);
-              await renderCategories();
-              await renderTemplateGallery();
-            } catch (error) {
-              console.error('Failed to delete category:', error);
-              showToast('카테고리 삭제 실패', 'error');
-            }
-          }
-        };
-        el.categoryList.appendChild(item);
-      });
-    } catch (error) {
-      console.error('Failed to load categories:', error);
-      showToast('카테고리 불러오기 실패', 'error');
-    }
-  }
-              showToast(`카테고리 '${cat.name}' 삭제 완료`);
-              await renderCategories();
-              await renderTemplateGallery();
-            } catch (error) {
-              console.error('Failed to delete category:', error);
-              showToast('카테고리 삭제 실패', 'error');
-            }
-          }
-        };
-        el.categoryList.appendChild(item);
-      });
-    } catch (error) {
-      console.error('Failed to load categories:', error);
-      showToast('카테고리 불러오기 실패', 'error');
-    }
-  }
-              }
-              showToast(`카테고리 '${cat.name}' 삭제 완료`);
-              await renderCategories();
-              await renderTemplateGallery();
-            } catch (error) {
-              console.error('Failed to delete category:', error);
-              showToast('카테고리 삭제 실패', 'error');
             }
           }
         };
