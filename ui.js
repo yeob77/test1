@@ -828,6 +828,7 @@ async function boot() {
               const templatesToUpdate = await getTemplatesFromDB(cat.name);
               for (const tpl of templatesToUpdate) {
                 await updateTemplateCategoryInDB(tpl.name, 'uncategorized');
+              }
               showToast(`카테고리 '${cat.name}' 삭제 완료`);
               await renderCategories();
               await renderTemplateGallery();
