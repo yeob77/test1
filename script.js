@@ -105,6 +105,10 @@
   const el = {};
   ids.forEach(i => el[i] = $(i));
 
+  function setStatus(t) {
+    statusEl.textContent = '상태: ' + t;
+  }
+
   // ===== State =====
   let drawing = false;
   let panning = false;
@@ -154,7 +158,6 @@
   function hideLoading() {
     el['loading-overlay'].classList.remove('show');
   }
-
   function showView(viewId) {
     const views = document.querySelectorAll('.view');
     views.forEach(view => {
