@@ -1254,6 +1254,6 @@
     setStatus('준비완료');
   }
 
-  boot();
+  document.addEventListener('DOMContentLoaded', boot);
 
 })();
