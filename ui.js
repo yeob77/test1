@@ -5,7 +5,7 @@ const $ = id => document.getElementById(id);
 
 const ids = [
   // Gallery View
-  'templateSelect', 'changeTemplateBtn', 'tplFile', 'tplImportBtn', 'urlInput', 'urlImportBtn',
+  'tplFile', 'tplImportBtn', 'urlInput', 'urlImportBtn',
   'tplCategory', 'prevTemplatePageBtn', 'nextTemplatePageBtn', 'templatePageInfo',
   'templateCategoryButtons', 'templateGallery', 'saveBtn', 'loadBtn', 'downloadBtn',
   'resetBtn',
@@ -34,7 +34,6 @@ export const state = {
   brush: 'pen',
   pattern: 'none',
   bucketPattern: true,
-  template: 'flower',
   currentBaseImage: null,
   scale: 1,
   panX: 0,
@@ -570,30 +569,7 @@ el.urlImportBtn.onclick = () => {
   importImageFromUrl(url);
 };
 
-el.changeTemplateBtn.onclick = () => {
-  const hadPaint = hasAnyPaint();
-  const clearPaint = hadPaint ? confirm('도안을 변경합니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;
-  
-  state.currentBaseImage = null;
-  state.template = el.templateSelect.value;
-  
-  state.scale = 1;
-  state.panX = 0;
-  state.panY = 0;
-  applyViewTransform();
-  redrawBaseCanvas(); 
-  
-  if (clearPaint) {
-    const pctx = el.paint.getContext('2d', { willReadFrequently: true });
-    pctx.clearRect(0, 0, el.paint.width, el.paint.height);
-  }
-  
-  state.undo = [];
-  state.redo = [];
 
-  setStatus('도안 변경: ' + state.template + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
-  showView('drawingView');
-};
 
 async function renderTemplateGallery() {
   console.log('renderTemplateGallery started.');
