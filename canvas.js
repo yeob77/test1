@@ -5,8 +5,13 @@ let panning = false;
 let lastX = 0;
 let lastY = 0;
 
-const pctx = el.paint.getContext('2d', { willReadFrequently: true });
-const bctx = el.base.getContext('2d', { willReadFrequently: true });
+let pctx;
+let bctx;
+
+export function initCanvas() {
+  pctx = el.paint.getContext('2d', { willReadFrequently: true });
+  bctx = el.base.getContext('2d', { willReadFrequently: true });
+}
 
 export function applyViewTransform() {
   const cssPanX = state.panX;

@@ -1,5 +1,5 @@
 import { openColoringDB, addTemplateToDB, getTemplatesFromDB, deleteTemplateFromDB } from './db.js';
-import { resizeCanvases, undo, redo, applyViewTransform, importTemplate, bucketFill, beginStroke, endStroke, strokeTo, canvasPos, getTouchDistance, getTouchCenter, redrawBaseCanvas } from './canvas.js';
+import { initCanvas, resizeCanvases, undo, redo, applyViewTransform, importTemplate, bucketFill, beginStroke, endStroke, strokeTo, canvasPos, getTouchDistance, getTouchCenter, redrawBaseCanvas } from './canvas.js';
 
 const $ = id => document.getElementById(id);
 
@@ -678,6 +678,7 @@ function hideModal() {
 
 async function boot() {
   console.log('Boot function started.');
+  initCanvas();
   try {
     await openColoringDB();
     console.log('IndexedDB opened.');
