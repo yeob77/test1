@@ -92,9 +92,9 @@ function showView(viewId) {
     el.navGalleryBtn.classList.add('active');
   } else if (viewId === 'drawingView') {
     el.navDrawingBtn.classList.add('active');
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       resizeCanvases();
-    }, 10);
+    });
   } else if (viewId === 'settingsView') {
     el.navSettingsBtn.classList.add('active');
   }
