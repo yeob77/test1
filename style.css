@@ -159,7 +159,8 @@ canvas { position:absolute; inset:0; width:100%; height:100%; touch-action:none;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 60px; /* Changed from 80px */
+  height: 70px; /* Added fixed height */
+  min-height: 0; /* Reset min-height */
 }
 
 .template-item.active {
