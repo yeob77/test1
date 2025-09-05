@@ -23,7 +23,8 @@ const ids = [
   // Global
   'status', 'base', 'paint', 'templateModal', 'modalImage', 'closeButton', 'loadTemplateFromModalBtn',
   'navGalleryBtn', 'navDrawingBtn', 'navSettingsBtn',
-  'toast-container', 'loading-overlay'
+  'toast-container', 'loading-overlay',
+  'newCategoryName', 'addCategoryBtn', 'categoryList' // New IDs
 ];
 export const el = {};
 ids.forEach(i => el[i] = $(i));
@@ -583,6 +584,32 @@ async function renderTemplateGallery() {
   console.log('renderTemplateGallery started.');
   el.templateGallery.innerHTML = '';
   try {
+    // Populate tplCategory dropdown with custom categories
+    const customCategories = await getCategoriesFromDB();
+    const tplCategorySelect = el.tplCategory;
+    // Clear existing options except the default ones (if any)
+    tplCategorySelect.innerHTML = '<option value="uncategorized">미분류</option>'; // Keep default
+    // Add predefined categories (if they are not in DB)
+    const predefinedCategories = ['animals', 'nature', 'objects', 'abstract'];
+    predefinedCategories.forEach(catId => {
+      if (!customCategories.some(c => c.name === catId)) {
+        const option = document.createElement('option');
+        option.value = catId;
+        option.textContent = TEMPLATE_CATEGORIES.find(c => c.id === catId)?.label || catId;
+        tplCategorySelect.appendChild(option);
+      }
+    });
+    // Add custom categories
+    customCategories.forEach(cat => {
+      const option = document.createElement('option');
+      option.value = cat.name;
+      option.textContent = cat.name;
+      tplCategorySelect.appendChild(option);
+    });
+    // Set selected category
+    tplCategorySelect.value = state.currentCategory;
+
+
     const allTemplates = await getTemplatesFromDB();
     console.log('All templates fetched:', allTemplates.length);
     const filteredTemplates = state.currentCategory === 'all'
@@ -638,7 +665,7 @@ async function renderTemplateGallery() {
       };
       item.appendChild(deleteBtn);
       item.onclick = () => {
-        showModal(tpl.data);
+        showModal(tpl.data, tpl.name, tpl.category); // Pass template name and category
       };
       el.templateGallery.appendChild(item);
     });
@@ -648,11 +675,66 @@ async function renderTemplateGallery() {
   }
 }
 
-function showModal(imageUrl) {
+function showModal(imageUrl, templateName, currentCategory) { // Add templateName and currentCategory
   console.log('showModal called with image:', imageUrl ? imageUrl.substring(0, 50) + '...' : 'null');
   el.modalImage.src = imageUrl;
   el.templateModal.style.display = 'flex';
-}
+
+  // Add category change dropdown to modal
+  const categorySelectHtml = `
+    <div class="row" style="margin-top: 15px;">
+      <label for="modalCategorySelect">카테고리 변경:</label>
+      <select id="modalCategorySelect"></select>
+    </div>
+  `;
+  // Find the loadTemplateFromModalBtn's parent and insert before it
+  const loadBtnParent = el.loadTemplateFromModalBtn.parentElement;
+  const categorySelectDiv = document.createElement('div');
+  categorySelectDiv.innerHTML = categorySelectHtml;
+  loadBtnParent.insertBefore(categorySelectDiv.firstElementChild, el.loadTemplateFromModalBtn);
+
+  const modalCategorySelect = document.getElementById('modalCategorySelect');
+  // Populate modalCategorySelect with all categories
+  async function populateModalCategories() {
+    modalCategorySelect.innerHTML = '';
+    const allCategories = await getCategoriesFromDB();
+    const predefinedCategories = TEMPLATE_CATEGORIES.filter(cat => cat.id !== 'all'); // Exclude 'all'
+    
+    // Add predefined categories
+    predefinedCategories.forEach(cat => {
+      const option = document.createElement('option');
+      option.value = cat.id;
+      option.textContent = cat.label;
+      modalCategorySelect.appendChild(option);
+    });
+
+    // Add custom categories
+    allCategories.forEach(cat => {
+      if (!predefinedCategories.some(pc => pc.id === cat.name)) { // Avoid duplicating predefined
+        const option = document.createElement('option');
+        option.value = cat.name;
+        option.textContent = cat.name;
+        modalCategorySelect.appendChild(option);
+      }
+    });
+    modalCategorySelect.value = currentCategory || 'uncategorized'; // Set current category
+  }
+  populateModalCategories();
+
+  // Add event listener for category change
+  modalCategorySelect.onchange = async () => {
+    const newCategory = modalCategorySelect.value;
+    if (templateName && newCategory) {
+      try {
+        await updateTemplateCategoryInDB(templateName, newCategory);
+        showToast(`'${templateName}' 도안의 카테고리가 '${newCategory}'(으)로 변경되었습니다.`);
+        await renderTemplateGallery(); // Re-render gallery to reflect changes
+      } catch (error) {
+        console.error('Failed to update template category:', error);
+        showToast('도안 카테고리 변경 실패', 'error');
+      }
+    }
+  };
 
 function hideModal() {
   console.log('hideModal called.');
@@ -700,6 +782,72 @@ async function boot() {
     state.isChildMode = savedChildMode === 'true';
   }
   applyUIMode();
+
+  // New Category Management Logic
+  el.addCategoryBtn.onclick = async () => {
+    const categoryName = el.newCategoryName.value.trim();
+    if (categoryName) {
+      try {
+        await addCategoryToDB(categoryName);
+        showToast(`카테고리 '${categoryName}' 추가 완료`);
+        el.newCategoryName.value = ''; // Clear input
+        await renderCategories(); // Re-render categories
+        await renderTemplateGallery(); // Re-render gallery to update category options
+      } catch (error) {
+        console.error('Failed to add category:', error);
+        showToast('카테고리 추가 실패', 'error');
+      }
+    } else {
+      showToast('카테고리 이름을 입력해주세요.', 'warning');
+    }
+  };
+
+  async function renderCategories() {
+    el.categoryList.innerHTML = '';
+    try {
+      const categories = await getCategoriesFromDB();
+      if (categories.length === 0) {
+        el.categoryList.innerHTML = '<div style="text-align:center; padding:10px; font-size:0.9em; color:#aaa;">저장된 카테고리가 없습니다.</div>';
+        return;
+      }
+      categories.forEach(cat => {
+        const item = document.createElement('div');
+        item.className = 'template-item'; // Reusing template-item style
+        item.dataset.name = cat.name;
+        item.innerHTML = `
+          <span>${cat.name}</span>
+          <button type="button" class="delete-btn" data-category-name="${cat.name}">X</button>
+        `;
+        const deleteBtn = item.querySelector('.delete-btn');
+        deleteBtn.onclick = async (e) => {
+          e.stopPropagation();
+          if (confirm(`카테고리 '${cat.name}'을(를) 삭제하시겠습니까? 이 카테고리에 속한 도안은 '미분류'로 변경됩니다.`)) {
+            try {
+              await deleteCategoryFromDB(cat.name);
+              // Update templates in this category to 'uncategorized'
+              const templatesToUpdate = await getTemplatesFromDB(cat.name);
+              for (const tpl of templatesToUpdate) {
+                await updateTemplateCategoryInDB(tpl.name, 'uncategorized');
+              }
+              showToast(`카테고리 '${cat.name}' 삭제 완료`);
+              await renderCategories();
+              await renderTemplateGallery();
+            } catch (error) {
+              console.error('Failed to delete category:', error);
+              showToast('카테고리 삭제 실패', 'error');
+            }
+          }
+        };
+        el.categoryList.appendChild(item);
+      });
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+      showToast('카테고리 불러오기 실패', 'error');
+    }
+  }
+
+  // Initial render of categories
+  await renderCategories();
 
   el.closeButton.onclick = hideModal;
   window.onclick = (event) => {
