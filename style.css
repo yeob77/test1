@@ -388,15 +388,15 @@ body.child-mode .child-mode-only { display: block; }
     flex-wrap: wrap;
     justify-content: center;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: auto; /* Changed to auto for vertical scrolling */
     height: auto;
-    max-height: 30vh; /* Limit height */
+    /* Removed max-height: 30vh; */
   }
 }
 
 @media (max-width: 480px) {
   .tools-sidebar {
-    max-height: 40vh; /* Allow a bit more height on very small screens */
+    /* Removed max-height: 40vh; */
   }
 
   .row, .toolbar {
