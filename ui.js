@@ -689,13 +689,15 @@ async function boot() {
   if (el.sidebarToggleBtn && drawingView) {
     el.sidebarToggleBtn.onclick = () => {
       drawingView.classList.toggle('sidebar-collapsed');
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         resizeCanvases();
-      }, 300);
+      });
     };
   }
 
-  resizeCanvases();
+  requestAnimationFrame(() => {
+    resizeCanvases();
+  });
 
   const savedChildMode = localStorage.getItem('isChildMode');
   if (savedChildMode !== null) {
