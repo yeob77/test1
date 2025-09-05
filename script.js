@@ -376,7 +376,7 @@
     const screenY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     
     const cssX = screenX - r.left;
-    const cssY = cssY - r.top;
+    const cssY = screenY - r.top;
 
     // Reverse the CSS transform to find the logical position in CSS pixels
     const logicalCssX = (cssX - state.panX) / state.scale;
