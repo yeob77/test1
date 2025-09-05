@@ -833,7 +833,7 @@ async function boot() {
               await renderTemplateGallery();
             } catch (error) {
               console.error('Failed to delete category:', error);
-              showToast('카테고리 삭제 실패', 'error');
+              showToast('카테고리 불러오기 실패', 'error');
             }
           }
         };
