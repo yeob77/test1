@@ -828,6 +828,22 @@ async function boot() {
               const templatesToUpdate = await getTemplatesFromDB(cat.name);
               for (const tpl of templatesToUpdate) {
                 await updateTemplateCategoryInDB(tpl.name, 'uncategorized');
+              showToast(`카테고리 '${cat.name}' 삭제 완료`);
+              await renderCategories();
+              await renderTemplateGallery();
+            } catch (error) {
+              console.error('Failed to delete category:', error);
+              showToast('카테고리 삭제 실패', 'error');
+            }
+          }
+        };
+        el.categoryList.appendChild(item);
+      });
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+      showToast('카테고리 불러오기 실패', 'error');
+    }
+  }
               }
               showToast(`카테고리 '${cat.name}' 삭제 완료`);
               await renderCategories();
