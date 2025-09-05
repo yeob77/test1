@@ -243,7 +243,7 @@ function buildBrushBar() {
       state.brush = b.id;
       [...el.brushBar.children].forEach(x => x.classList.remove('active'));
       btn.classList.add('active');
-      setStatus('브러시: ' + b.label);
+      showToast('브러시: ' + b.label);
     };
     el.brushBar.appendChild(btn);
   });
@@ -261,7 +261,7 @@ function buildPatternBar() {
       _patternKey = '';
       [...el.patternBar.children].forEach(x => x.classList.remove('active'));
       btn.classList.add('active');
-      setStatus('패턴: ' + p.label);
+      showToast('패턴: ' + p.label);
     };
     el.patternBar.appendChild(btn);
   });
@@ -347,16 +347,16 @@ el.modeToggleBtn.onclick = () => {
   localStorage.setItem('isChildMode', state.isChildMode);
   applyUIMode();
 };
-el.toolBrush.onclick = () => { state.tool = 'brush'; applyToolActive(); setStatus('툴: 브러시'); };
-el.toolBucket.onclick = () => { state.tool = 'bucket'; applyToolActive(); setStatus('툴: 채우기'); };
+el.toolBrush.onclick = () => { state.tool = 'brush'; applyToolActive(); showToast('툴: 브러시'); };
+el.toolBucket.onclick = () => { state.tool = 'bucket'; applyToolActive(); showToast('툴: 채우기'); };
 el.toolEraser.onclick = () => {
   state.tool = 'eraser';
   applyToolActive();
-  setStatus('툴: 지우개');
+  showToast('툴: 지우개');
   const pctx = el.paint.getContext('2d', { willReadFrequently: true });
   pctx.globalAlpha = 1;
 };
-el.toolPan.onclick = () => { state.tool = 'pan'; applyToolActive(); setStatus('툴: 이동'); };
+el.toolPan.onclick = () => { state.tool = 'pan'; applyToolActive(); showToast('툴: 이동'); };
 el.undoBtn.onclick = undo;
 el.redoBtn.onclick = redo;
 
@@ -436,7 +436,7 @@ el.resetViewBtn.onclick = () => {
 el.clearPaintBtn.onclick = () => { 
   const pctx = el.paint.getContext('2d', { willReadFrequently: true });
   pctx.clearRect(0, 0, el.paint.width, el.paint.height); 
-  setStatus('채색만 지움(도안 유지)'); 
+  showToast('채색만 지움(도안 유지)'); 
 };
 el.wipeAllBtn.onclick = () => { 
   if (!confirm('정말 전체 삭제(도안 포함)할까요?')) return; 
@@ -444,7 +444,7 @@ el.wipeAllBtn.onclick = () => {
   const pctx = el.paint.getContext('2d', { willReadFrequently: true });
   bctx.clearRect(0, 0, el.base.width, el.base.height); 
   pctx.clearRect(0, 0, el.paint.width, el.paint.height); 
-  setStatus('전체 삭제 완료'); 
+  showToast('전체 삭제 완료'); 
 };
 el.saveBtn.onclick = () => { 
   const W = el.base.width, H = el.base.height; 
@@ -455,20 +455,20 @@ el.saveBtn.onclick = () => {
   t.drawImage(el.paint, 0, 0, W, H); 
   const url = tmp.toDataURL('image/png'); 
   localStorage.setItem('coloring.save', url); 
-  setStatus('저장 완료'); 
+  showToast('저장 완료'); 
 };
 el.loadBtn.onclick = () => { 
   const url = localStorage.getItem('coloring.save'); 
-  if (!url) { setStatus('저장본 없음'); return; } 
+  if (!url) { showToast('저장본 없음', 'info'); return; } 
   const img = new Image(); 
-  img.onload = () => { 
+  img.onload = () => 
     const W = el.base.width, H = el.base.height;
     const bctx = el.base.getContext('2d', { willReadFrequently: true });
     const pctx = el.paint.getContext('2d', { willReadFrequently: true });
     bctx.clearRect(0, 0, W, H); 
     pctx.clearRect(0, 0, el.paint.width, el.paint.height); 
     bctx.drawImage(img, 0, 0, W, H); 
-    setStatus('불러오기 완료(합성본을 도안으로 올림)'); 
+    showToast('불러오기 완료(합성본을 도안으로 올림)'); 
   }; 
   img.src = url; 
 };
@@ -486,7 +486,7 @@ el.downloadBtn.onclick = () => {
   link.download = 'coloring-art.png'; 
   link.href = tempCanvas.toDataURL('image/png'); 
   link.click(); 
-  setStatus('이미지 다운로드 시작'); 
+  showToast('이미지 다운로드 시작'); 
 };
 el.tplImportBtn.onclick = () => el.tplFile.click();
 el.tplFile.onchange = (e) => { 
@@ -500,16 +500,16 @@ el.tplFile.onchange = (e) => {
       const selectedCategory = el.tplCategory.value;
       try {
         await addTemplateToDB(templateName, r.result, selectedCategory);
-        setStatus('도안 저장 완료: ' + templateName);
+        showToast('도안 저장 완료: ' + templateName);
         await renderTemplateGallery();
         const hadPaint = hasAnyPaint();
         const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;
         importTemplate(img, clearPaint);
-        setStatus('도안 불러오기 완료' + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
+        showToast('도안 불러오기 완료' + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
         showView('drawingView');
       } catch (error) {
         console.error('Failed to save template to DB:', error);
-        setStatus('도안 저장 실패');
+        showToast('도안 저장 실패', 'error');
       } 
     };
     img.src = r.result; 
@@ -519,10 +519,10 @@ el.tplFile.onchange = (e) => {
 
 async function importImageFromUrl(url) {
   if (!url) {
-    setStatus('URL을 입력해주세요.');
+    showToast('URL을 입력해주세요.', 'warning');
     return;
   }
-  setStatus('URL에서 도안 불러오는 중...');
+  showToast('URL에서 도안 불러오는 중...', 'info');
   try {
     const response = await fetch(url);
     if (!response.ok) {
@@ -537,31 +537,32 @@ async function importImageFromUrl(url) {
         const category = el.tplCategory.value;
         try {
           await addTemplateToDB(templateName, reader.result, category);
-          setStatus('도안 저장 완료: ' + templateName + ' (카테고리: ' + category + ')');
+          showToast('도안 저장 완료: ' + templateName + ' (카테고리: ' + category + ')');
           await renderTemplateGallery();
           const hadPaint = hasAnyPaint();
           const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;
           importTemplate(img, clearPaint);
-          setStatus('도안 불러오기 완료' + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
+          showToast('도안 불러오기 완료' + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
           showView('drawingView');
         } catch (error) {
           console.error('Failed to save template to DB:', error);
-          setStatus('도안 저장 실패');
+          showToast('도안 저장 실패', 'error');
         }
       };
       img.onerror = () => {
-        setStatus('이미지 로드 실패: 유효한 이미지 URL이 아닙니다.');
+        showToast('이미지 로드 실패: 유효한 이미지 URL이 아닙니다.', 'error');
         console.error('Image load error from URL:', url);
       };
       img.src = reader.result;
     };
     reader.onerror = (error) => {
-      setStatus('파일 읽기 오류');
+      showToast('파일 읽기 오류', 'error');
       console.error('FileReader error:', error);
     };
     reader.readAsDataURL(blob);
-  } catch (error) {
-    setStatus('도안 불러오기 실패: ' + error.message);
+  }
+  catch (error) {
+    showToast('도안 불러오기 실패: ' + error.message, 'error');
     console.error('Failed to fetch image from URL:', error);
   }
 }
@@ -622,11 +623,11 @@ async function renderTemplateGallery() {
         if (confirm(`'${tpl.name}' 도안을 삭제하시겠습니까?`)) {
           try {
             await deleteTemplateFromDB(tpl.name);
-            setStatus(`'${tpl.name}' 도안 삭제 완료`);
+            showToast(`'${tpl.name}' 도안 삭제 완료`);
             renderTemplateGallery();
           } catch (error) {
             console.error('Failed to delete template:', error);
-            setStatus('도안 삭제 실패');
+            showToast('도안 삭제 실패', 'error');
           }
         }
       };
@@ -638,7 +639,7 @@ async function renderTemplateGallery() {
     });
   } catch (error) {
     console.error('Failed to load templates from DB:', error);
-    setStatus('도안 불러오기 실패');
+    showToast('도안 불러오기 실패', 'error');
   }
 }
 
@@ -717,7 +718,7 @@ async function boot() {
         const hadPaint = hasAnyPaint();
         const clearPaint = hadPaint ? confirm('새 도안을 불러옵니다. 현재 채색을 지울까요?\n확인=지움 / 취소=유지') : false;
         importTemplate(imgToLoad, clearPaint);
-        setStatus('도안 불러오기 완료' + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
+        showToast('도안 불러오기 완료' + (clearPaint ? ' (채색 삭제)' : ' (채색 유지)'));
         hideModal();
         showView('drawingView');
       };
