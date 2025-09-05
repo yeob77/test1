@@ -1,6 +1,8 @@
 import { openColoringDB, addTemplateToDB, getTemplatesFromDB, deleteTemplateFromDB } from './db.js';
 import { initCanvas, resizeCanvases, undo, redo, applyViewTransform, importTemplate, bucketFill, beginStroke, endStroke, strokeTo, canvasPos, getTouchDistance, getTouchCenter, redrawBaseCanvas } from './canvas.js';
 
+const TEMPLATES_PER_PAGE = 12; // Number of templates to display per page
+
 const $ = id => document.getElementById(id);
 
 const ids = [
@@ -582,7 +584,7 @@ async function renderTemplateGallery() {
       : allTemplates.filter(tpl => tpl.category === state.currentCategory);
     console.log('Filtered templates:', filteredTemplates.length);
 
-    const totalPages = Math.ceil(filteredTemplates.length / 12);
+    const totalPages = Math.ceil(filteredTemplates.length / TEMPLATES_PER_PAGE);
     state.currentPage = Math.max(1, Math.min(state.currentPage, totalPages || 1));
 
     el.templatePageInfo.textContent = `${state.currentPage} / ${totalPages || 1}`;
@@ -595,8 +597,8 @@ async function renderTemplateGallery() {
       return;
     }
 
-    const startIndex = (state.currentPage - 1) * 12;
-    const endIndex = startIndex + 12;
+    const startIndex = (state.currentPage - 1) * TEMPLATES_PER_PAGE;
+    const endIndex = startIndex + TEMPLATES_PER_PAGE;
     const templatesToDisplay = filteredTemplates.slice(startIndex, endIndex);
     console.log('Templates to display on current page:', templatesToDisplay.length);
 
