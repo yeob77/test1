@@ -824,7 +824,6 @@ async function boot() {
           if (confirm(`카테고리 '${cat.name}'을(를) 삭제하시겠습니까? 이 카테고리에 속한 도안은 '미분류'로 변경됩니다.`)) {
             try {
               await deleteCategoryFromDB(cat.name);
-              // Update templates in this category to 'uncategorized'
               const templatesToUpdate = await getTemplatesFromDB(cat.name);
               for (const tpl of templatesToUpdate) {
                 await updateTemplateCategoryInDB(tpl.name, 'uncategorized');
