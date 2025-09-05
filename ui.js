@@ -695,10 +695,6 @@ async function boot() {
     };
   }
 
-  requestAnimationFrame(() => {
-    resizeCanvases();
-  });
-
   const savedChildMode = localStorage.getItem('isChildMode');
   if (savedChildMode !== null) {
     state.isChildMode = savedChildMode === 'true';
