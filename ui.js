@@ -326,6 +326,10 @@ function updateChildColorSwatchActive() {
 
 function hasAnyPaint() {
   const W = el.paint.width, H = el.paint.height;
+  // 캔버스 너비나 높이가 0이면, 그림이 없다고 판단하고 오류를 피함
+  if (W === 0 || H === 0) {
+    return false;
+  }
   const pctx = el.paint.getContext('2d', { willReadFrequently: true });
   const d = pctx.getImageData(0, 0, W, H).data;
   for (let i = 3; i < d.length; i += 4) {
