@@ -468,10 +468,10 @@ el.loadBtn.onclick = () => {
     bctx.clearRect(0, 0, W, H); 
     pctx.clearRect(0, 0, el.paint.width, el.paint.height); 
     bctx.drawImage(img, 0, 0, W, H);
-  }; 
-    showToast('불러오기 완료(합성본을 도안으로 올림)'); 
-  }; 
-  img.src = url; 
+  bctx.drawImage(img, 0, 0, W, H);
+    showToast('불러오기 완료(합성본을 도안으로 올림)');
+  };
+  img.src = url;
 };
 el.downloadBtn.onclick = () => { 
   const W = el.base.width; 
