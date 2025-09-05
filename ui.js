@@ -394,7 +394,7 @@ function buildCategoryButtons() {
       renderTemplateGallery();
       el.templateCategoryButtons.querySelectorAll('.pbtn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      setStatus(`카테고리: ${cat.label}`);
+      showToast(`카테고리: ${cat.label}`);
     };
     el.templateCategoryButtons.appendChild(btn);
   });
