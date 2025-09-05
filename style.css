@@ -169,7 +169,7 @@ canvas { position:absolute; inset:0; width:100%; height:100%; touch-action:none;
 .template-item img {
   max-width: 100%;
   max-height: 50px; /* Changed from 60px */
-  object-fit: contain;
+  object-fit: cover; /* Changed from contain */
   margin-bottom: 2px; /* Changed from 5px */
 }
 
