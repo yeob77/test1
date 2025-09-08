@@ -683,18 +683,20 @@ function showModal(imageUrl, templateName, currentCategory) { // Add templateNam
   el.modalImage.src = imageUrl;
   el.templateModal.style.display = 'flex';
 
-  // Add category change dropdown to modal
-  const categorySelectHtml = `
-    <div class="row" style="margin-top: 15px;">
+  // Ensure only one category select exists
+  let categorySelectContainer = document.getElementById('modalCategorySelectContainer');
+  if (!categorySelectContainer) {
+    categorySelectContainer = document.createElement('div');
+    categorySelectContainer.id = 'modalCategorySelectContainer';
+    categorySelectContainer.className = 'row';
+    categorySelectContainer.style.marginTop = '15px';
+    categorySelectContainer.innerHTML = `
       <label for="modalCategorySelect">카테고리 변경:</label>
       <select id="modalCategorySelect"></select>
-    </div>
-  `;
-  // Find the loadTemplateFromModalBtn's parent and insert before it
-  const loadBtnParent = el.loadTemplateFromModalBtn.parentElement;
-  const categorySelectDiv = document.createElement('div');
-  categorySelectDiv.innerHTML = categorySelectHtml;
-  loadBtnParent.insertBefore(categorySelectDiv.firstElementChild, el.loadTemplateFromModalBtn);
+    `;
+    const loadBtnParent = el.loadTemplateFromModalBtn.parentElement;
+    loadBtnParent.insertBefore(categorySelectContainer, el.loadTemplateFromModalBtn);
+  }
 
   const modalCategorySelect = document.getElementById('modalCategorySelect');
   // Populate modalCategorySelect with all categories
@@ -750,6 +752,11 @@ function hideModal() {
   console.log('hideModal called.');
   el.templateModal.style.display = 'none';
   el.modalImage.src = '';
+  // Remove the category select container when modal is hidden
+  const categorySelectContainer = document.getElementById('modalCategorySelectContainer');
+  if (categorySelectContainer) {
+    categorySelectContainer.remove();
+  }
 }
 
 async function boot() {
