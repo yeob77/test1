@@ -501,7 +501,7 @@ el.tplFile.onchange = (e) => {
   const r = new FileReader(); 
   r.onload = async () => { 
     const img = new Image(); 
-    img.onload = async () => {
+    img.onload = async () => { 
       const templateName = f.name.split('.').slice(0, -1).join('.') || 'untitled';
       const selectedCategory = el.tplCategory.value;
       try {
@@ -590,14 +590,17 @@ async function renderTemplateGallery() {
     // Clear existing options except the default ones (if any)
     tplCategorySelect.innerHTML = '<option value="uncategorized">미분류</option>'; // Keep default
     // Add predefined categories (if they are not in DB)
-    const predefinedCategories = ['animals', 'nature', 'objects', 'abstract'];
-    predefinedCategories.forEach(catId => {
-      if (!customCategories.some(c => c.name === catId)) {
-        const option = document.createElement('option');
-        option.value = catId;
-        option.textContent = TEMPLATE_CATEGORIES.find(c => c.id === catId)?.label || catId;
-        tplCategorySelect.appendChild(option);
-      }
+    const predefinedCategories = [
+      { id: 'animals', label: '동물', icon: '🐾' },
+      { id: 'nature', label: '자연', icon: '🌳' },
+      { id: 'objects', label: '사물', icon: '💡' },
+      { id: 'abstract', label: '추상', icon: '🌀' }
+    ];
+    predefinedCategories.forEach(cat => {
+      const option = document.createElement('option');
+      option.value = cat.id;
+      option.textContent = cat.label;
+      tplCategorySelect.appendChild(option);
     });
     // Add custom categories
     customCategories.forEach(cat => {
@@ -698,7 +701,13 @@ function showModal(imageUrl, templateName, currentCategory) { // Add templateNam
   async function populateModalCategories() {
     modalCategorySelect.innerHTML = '';
     const allCategories = await getCategoriesFromDB();
-    const predefinedCategories = TEMPLATE_CATEGORIES.filter(cat => cat.id !== 'all'); // Exclude 'all'
+    const predefinedCategories = [
+      { id: 'uncategorized', label: '미분류' },
+      { id: 'animals', label: '동물' },
+      { id: 'nature', label: '자연', icon: '🌳' },
+      { id: 'objects', label: '사물', icon: '💡' },
+      { id: 'abstract', label: '추상', icon: '🌀' }
+    ];
     
     // Add predefined categories
     predefinedCategories.forEach(cat => {
@@ -735,6 +744,7 @@ function showModal(imageUrl, templateName, currentCategory) { // Add templateNam
       }
     }
   };
+} // End of showModal function
 
 function hideModal() {
   console.log('hideModal called.');
@@ -881,8 +891,7 @@ async function boot() {
   showView(state.currentView);
 
   setStatus('준비완료');
-} // boot 함수의 닫는 중괄호
+} // End of boot function
 
 document.addEventListener('DOMContentLoaded', boot);
 
-})(); // IIFE의 닫는 중괄호
