@@ -179,19 +179,38 @@ function attachPointer() {
       const canvasCssWidth = el.base.width / dpr;
       const canvasCssHeight = el.base.height / dpr;
 
-      // Minimum panX: Canvas left edge should not go past sidebar right edge
-      // Max panX: Canvas right edge should not go past screen right edge
-      const minPanX = SIDEBAR_WIDTH;
-      const maxPanX = window.innerWidth - (canvasCssWidth * state.scale);
+      // Calculate effective canvas width/height after scaling
+      const effectiveCanvasWidth = canvasCssWidth * state.scale;
+      const effectiveCanvasHeight = canvasCssHeight * state.scale;
 
-      // Minimum panY: Canvas top edge should not go past top nav bottom edge
-      // Max panY: Canvas bottom edge should not go past screen bottom edge
-      const minPanY = TOP_NAV_HEIGHT;
-      const maxPanY = window.innerHeight - (canvasCssHeight * state.scale);
+      // minPanX: Canvas left edge should not go past sidebar right edge
+      // This means the canvas's X position (panX) must be at least SIDEBAR_WIDTH
+      const minAllowedPanX = SIDEBAR_WIDTH;
+      // maxPanX: Canvas right edge should not go past screen right edge
+      // This means the canvas's X position (panX) plus its effective width must be at least window.innerWidth
+      // So, panX must be at most window.innerWidth - effectiveCanvasWidth
+      const maxAllowedPanX = window.innerWidth - effectiveCanvasWidth;
+
+      // minPanY: Canvas top edge should not go past top nav bottom edge
+      const minAllowedPanY = TOP_NAV_HEIGHT;
+      // maxPanY: Canvas bottom edge should not go past screen bottom edge
+      const maxAllowedPanY = window.innerHeight - effectiveCanvasHeight;
 
       // Apply boundaries
-      state.panX = Math.max(minPanX, Math.min(newPanX, maxPanX));
-      state.panY = Math.max(minPanY, Math.min(newPanY, maxPanY));
+      // Ensure newPanX is within [maxAllowedPanX, minAllowedPanX]
+      // Note: maxAllowedPanX can be less than minAllowedPanX if the canvas is larger than the available space.
+      // In such cases, we want to allow panning within the canvas bounds.
+      state.panX = Math.max(Math.min(newPanX, minAllowedPanX), maxAllowedPanX);
+      state.panY = Math.max(Math.min(newPanY, minAllowedPanY), maxAllowedPanY);
+
+      // If the canvas is smaller than the available space, center it within the bounds
+      if (effectiveCanvasWidth < (window.innerWidth - SIDEBAR_WIDTH)) {
+        state.panX = (window.innerWidth - SIDEBAR_WIDTH - effectiveCanvasWidth) / 2 + SIDEBAR_WIDTH;
+      }
+      if (effectiveCanvasHeight < (window.innerHeight - TOP_NAV_HEIGHT)) {
+        state.panY = (window.innerHeight - TOP_NAV_HEIGHT - effectiveCanvasHeight) / 2 + TOP_NAV_HEIGHT;
+      }
+
 
       applyViewTransform();
       return;
