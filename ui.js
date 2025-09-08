@@ -883,5 +883,6 @@ async function boot() {
   setStatus('준비완료');
 } // boot 함수의 닫는 중괄호
 
-})();
-document.addEventListener('DOMContentLoaded', boot); // IIFE의 닫는 중괄호
+document.addEventListener('DOMContentLoaded', boot);
+
+})(); // IIFE의 닫는 중괄호
