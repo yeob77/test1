@@ -105,6 +105,11 @@ export function importTemplate(img, clearPaint) {
 function snapshot() {
   try {
     const W = el.paint.width, H = el.paint.height;
+    // Prevent IndexSizeError if canvas dimensions are zero
+    if (W === 0 || H === 0) {
+      console.warn("Snapshot skipped: Canvas has zero width or height.");
+      return;
+    }
     const img = pctx.getImageData(0, 0, W, H);
     state.undo.push(img);
     if (state.undo.length > state.maxUndo) {
