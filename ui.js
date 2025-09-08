@@ -187,33 +187,33 @@ function attachPointer() {
       const availableWidth = window.innerWidth - SIDEBAR_WIDTH;
       const availableHeight = window.innerHeight - TOP_NAV_HEIGHT;
 
-      let minAllowedPanX, maxAllowedPanX, minAllowedPanY, maxAllowedPanY;
+      let minPanX, maxPanX, minPanY, maxPanY;
 
       // Horizontal boundaries
       if (effectiveCanvasWidth <= availableWidth) {
         // Canvas is smaller than or equal to available width, center it horizontally
-        minAllowedPanX = (availableWidth - effectiveCanvasWidth) / 2 + SIDEBAR_WIDTH;
-        maxAllowedPanX = minAllowedPanX; // No panning needed, fixed position
+        minPanX = (availableWidth - effectiveCanvasWidth) / 2 + SIDEBAR_WIDTH;
+        maxPanX = minPanX; // No panning needed, fixed position
       } else {
         // Canvas is larger than available width, allow panning
-        minAllowedPanX = availableWidth - effectiveCanvasWidth + SIDEBAR_WIDTH; // Canvas right edge aligns with screen right edge
-        maxAllowedPanX = SIDEBAR_WIDTH; // Canvas left edge aligns with sidebar right edge
+        minPanX = availableWidth - effectiveCanvasWidth + SIDEBAR_WIDTH; // Canvas right edge aligns with screen right edge
+        maxPanX = SIDEBAR_WIDTH; // Canvas left edge aligns with sidebar right edge
       }
 
       // Vertical boundaries
       if (effectiveCanvasHeight <= availableHeight) {
         // Canvas is smaller than or equal to available height, center it vertically
-        minAllowedPanY = (availableHeight - effectiveCanvasHeight) / 2 + TOP_NAV_HEIGHT;
-        maxAllowedPanY = minAllowedPanY; // No panning needed, fixed position
+        minPanY = (availableHeight - effectiveCanvasHeight) / 2 + TOP_NAV_HEIGHT;
+        maxPanY = minPanY; // No panning needed, fixed position
       } else {
         // Canvas is larger than available height, allow panning
-        minAllowedPanY = availableHeight - effectiveCanvasHeight + TOP_NAV_HEIGHT; // Canvas bottom edge aligns with screen bottom edge
-        maxAllowedPanY = TOP_NAV_HEIGHT; // Canvas top edge aligns with top nav bottom edge
+        minPanY = availableHeight - effectiveCanvasHeight + TOP_NAV_HEIGHT; // Canvas bottom edge aligns with screen bottom edge
+        maxPanY = TOP_NAV_HEIGHT; // Canvas top edge aligns with top nav bottom edge
       }
 
       // Apply boundaries
-      state.panX = Math.max(minAllowedPanX, Math.min(newPanX, maxAllowedPanX));
-      state.panY = Math.max(minAllowedPanY, Math.min(newPanY, maxAllowedPanY));
+      state.panX = Math.max(minPanX, Math.min(newPanX, maxPanX));
+      state.panY = Math.max(minPanY, Math.min(newPanY, maxPanY));
 
       applyViewTransform();
       return;
