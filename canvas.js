@@ -142,8 +142,9 @@ export function canvasPos(e) {
   const cssX = screenX - r.left;
   const cssY = screenY - r.top;
 
-  const logicalCssX = (cssX - state.panX) / state.scale;
-  const logicalCssY = (cssY - state.panY) / state.scale;
+  // Corrected calculation for logical CSS coordinates
+  const logicalCssX = (cssX / state.scale) - (state.panX / state.scale);
+  const logicalCssY = (cssY / state.scale) - (state.panY / state.scale);
 
   return { x: logicalCssX * dpr, y: logicalCssY * dpr };
 }
