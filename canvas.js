@@ -27,7 +27,8 @@ export function redrawPaintCanvas() {
   pctx.save();
   pctx.setTransform(1, 0, 0, 1, 0, 0);
   pctx.clearRect(0, 0, el.paint.width, el.paint.height);
-  pctx.translate(state.panX, state.panY);
+  // Apply pan values scaled by the current scale
+  pctx.translate(state.panX / state.scale, state.panY / state.scale);
   pctx.scale(state.scale, state.scale);
 
   const lastSnapshot = state.undo[state.undo.length - 1];
