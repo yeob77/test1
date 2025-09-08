@@ -1,4 +1,4 @@
-import { openColoringDB, addTemplateToDB, getTemplatesFromDB, deleteTemplateFromDB, updateTemplateCategoryInDB, getCategoriesFromDB, addCategoryToDB } from './db.js';
+import { openColoringDB, addTemplateToDB, getTemplatesFromDB, deleteTemplateFromDB, updateTemplateCategoryInDB, getCategoriesFromDB } from './db.js';
 import { initCanvas, resizeCanvases, undo, redo, applyViewTransform, importTemplate, bucketFill, beginStroke, endStroke, strokeTo, canvasPos, getTouchDistance, getTouchCenter, redrawBaseCanvas } from './canvas.js';
 
 const TEMPLATES_PER_PAGE = 12; // Number of templates to display per page
@@ -183,34 +183,37 @@ function attachPointer() {
       const effectiveCanvasWidth = canvasCssWidth * state.scale;
       const effectiveCanvasHeight = canvasCssHeight * state.scale;
 
-      // minPanX: Canvas left edge should not go past sidebar right edge
-      // This means the canvas's X position (panX) must be at least SIDEBAR_WIDTH
-      const minAllowedPanX = SIDEBAR_WIDTH;
-      // maxPanX: Canvas right edge should not go past screen right edge
-      // This means the canvas's X position (panX) plus its effective width must be at least window.innerWidth
-      // So, panX must be at most window.innerWidth - effectiveCanvasWidth
-      const maxAllowedPanX = window.innerWidth - effectiveCanvasWidth;
+      // Available drawing area width and height (excluding sidebar and top nav)
+      const availableWidth = window.innerWidth - SIDEBAR_WIDTH;
+      const availableHeight = window.innerHeight - TOP_NAV_HEIGHT;
 
-      // minPanY: Canvas top edge should not go past top nav bottom edge
-      const minAllowedPanY = TOP_NAV_HEIGHT;
-      // maxPanY: Canvas bottom edge should not go past screen bottom edge
-      const maxAllowedPanY = window.innerHeight - effectiveCanvasHeight;
+      let minAllowedPanX, maxAllowedPanX, minAllowedPanY, maxAllowedPanY;
+
+      // Horizontal boundaries
+      if (effectiveCanvasWidth <= availableWidth) {
+        // Canvas is smaller than or equal to available width, center it horizontally
+        minAllowedPanX = (availableWidth - effectiveCanvasWidth) / 2 + SIDEBAR_WIDTH;
+        maxAllowedPanX = minAllowedPanX; // No panning needed, fixed position
+      } else {
+        // Canvas is larger than available width, allow panning
+        minAllowedPanX = availableWidth - effectiveCanvasWidth + SIDEBAR_WIDTH; // Canvas right edge aligns with screen right edge
+        maxAllowedPanX = SIDEBAR_WIDTH; // Canvas left edge aligns with sidebar right edge
+      }
+
+      // Vertical boundaries
+      if (effectiveCanvasHeight <= availableHeight) {
+        // Canvas is smaller than or equal to available height, center it vertically
+        minAllowedPanY = (availableHeight - effectiveCanvasHeight) / 2 + TOP_NAV_HEIGHT;
+        maxAllowedPanY = minAllowedPanY; // No panning needed, fixed position
+      } else {
+        // Canvas is larger than available height, allow panning
+        minAllowedPanY = availableHeight - effectiveCanvasHeight + TOP_NAV_HEIGHT; // Canvas bottom edge aligns with screen bottom edge
+        maxAllowedPanY = TOP_NAV_HEIGHT; // Canvas top edge aligns with top nav bottom edge
+      }
 
       // Apply boundaries
-      // Ensure newPanX is within [maxAllowedPanX, minAllowedPanX]
-      // Note: maxAllowedPanX can be less than minAllowedPanX if the canvas is larger than the available space.
-      // In such cases, we want to allow panning within the canvas bounds.
-      state.panX = Math.max(Math.min(newPanX, minAllowedPanX), maxAllowedPanX);
-      state.panY = Math.max(Math.min(newPanY, minAllowedPanY), maxAllowedPanY);
-
-      // If the canvas is smaller than the available space, center it within the bounds
-      if (effectiveCanvasWidth < (window.innerWidth - SIDEBAR_WIDTH)) {
-        state.panX = (window.innerWidth - SIDEBAR_WIDTH - effectiveCanvasWidth) / 2 + SIDEBAR_WIDTH;
-      }
-      if (effectiveCanvasHeight < (window.innerHeight - TOP_NAV_HEIGHT)) {
-        state.panY = (window.innerHeight - TOP_NAV_HEIGHT - effectiveCanvasHeight) / 2 + TOP_NAV_HEIGHT;
-      }
-
+      state.panX = Math.max(minAllowedPanX, Math.min(newPanX, maxAllowedPanX));
+      state.panY = Math.max(minAllowedPanY, Math.min(newPanY, maxAllowedPanY));
 
       applyViewTransform();
       return;
@@ -431,7 +434,6 @@ function buildCategoryButtons() {
   TEMPLATE_CATEGORIES.forEach(cat => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'pbtn' + (state.currentCategory === cat.id ? ' active' : '');
     btn.textContent = cat.icon;
     btn.title = cat.label;
     btn.dataset.categoryId = cat.id;
@@ -642,7 +644,7 @@ async function renderTemplateGallery() {
       const option = document.createElement('option');
       option.value = cat.id;
       option.textContent = cat.label;
-      tplCategorySelect.appendChild(option);
+      modalCategorySelect.appendChild(option);
     });
     // Add custom categories
     customCategories.forEach(cat => {
@@ -725,17 +727,14 @@ function showModal(imageUrl, templateName, currentCategory) { // Add templateNam
   el.modalImage.src = imageUrl;
   el.templateModal.style.display = 'flex';
 
-  // Ensure only one category select exists
+  // Add category change dropdown to modal
   let categorySelectContainer = document.getElementById('modalCategorySelectContainer');
   if (!categorySelectContainer) {
     categorySelectContainer = document.createElement('div');
     categorySelectContainer.id = 'modalCategorySelectContainer';
     categorySelectContainer.className = 'row';
     categorySelectContainer.style.marginTop = '15px';
-    categorySelectContainer.innerHTML = `
-      <label for="modalCategorySelect">카테고리 변경:</label>
-      <select id="modalCategorySelect"></select>
-    `;
+    categorySelectContainer.innerHTML = `\n      <label for="modalCategorySelect">카테고리 변경:</label>\n      <select id="modalCategorySelect"></select>\n    `;
     const loadBtnParent = el.loadTemplateFromModalBtn.parentElement;
     loadBtnParent.insertBefore(categorySelectContainer, el.loadTemplateFromModalBtn);
   }
@@ -873,10 +872,7 @@ async function boot() {
         const item = document.createElement('div');
         item.className = 'template-item'; // Reusing template-item style
         item.dataset.name = cat.name;
-        item.innerHTML = `
-          <span>${cat.name}</span>
-          <button type="button" class="delete-btn" data-category-name="${cat.name}">X</button>
-        `;
+        item.innerHTML = `\n          <span>${cat.name}</span>\n          <button type="button" class="delete-btn" data-category-name="${cat.name}">X</button>\n        `;
         const deleteBtn = item.querySelector('.delete-btn');
         deleteBtn.onclick = async (e) => {
           e.stopPropagation();
@@ -943,4 +939,3 @@ async function boot() {
 } // End of boot function
 
 document.addEventListener('DOMContentLoaded', boot);
-
