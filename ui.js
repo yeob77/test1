@@ -644,7 +644,7 @@ async function renderTemplateGallery() {
       const option = document.createElement('option');
       option.value = cat.id;
       option.textContent = cat.label;
-      modalCategorySelect.appendChild(option);
+      tplCategorySelect.appendChild(option);
     });
     // Add custom categories
     customCategories.forEach(cat => {
@@ -744,14 +744,8 @@ function showModal(imageUrl, templateName, currentCategory) { // Add templateNam
   async function populateModalCategories() {
     modalCategorySelect.innerHTML = '';
     const allCategories = await getCategoriesFromDB();
-    const predefinedCategories = [
-      { id: 'uncategorized', label: '미분류' },
-      { id: 'animals', label: '동물' },
-      { id: 'nature', label: '자연', icon: '🌳' },
-      { id: 'objects', label: '사물', icon: '💡' },
-      { id: 'abstract', label: '추상', icon: '🌀' }
-    ];
-    
+    const predefinedCategories = TEMPLATE_CATEGORIES.filter(cat => cat.id !== 'all'); // Exclude 'all'
+
     // Add predefined categories
     predefinedCategories.forEach(cat => {
       const option = document.createElement('option');
