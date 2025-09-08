@@ -168,8 +168,31 @@ function attachPointer() {
       e.preventDefault();
       const dx = ('touches' in e ? e.touches[0].clientX : e.clientX) - panStart.x;
       const dy = ('touches' in e ? e.touches[0].clientY : e.clientY) - panStart.y;
-      state.panX = initialPan.x + dx;
-      state.panY = initialPan.y + dy;
+      
+      let newPanX = initialPan.x + dx;
+      let newPanY = initialPan.y + dy;
+
+      // Calculate boundaries
+      const SIDEBAR_WIDTH = 280; // From style.css
+      const TOP_NAV_HEIGHT = 60; // Approximate height of main-nav (adjust if needed)
+      const dpr = el.paint.width / el.base.getBoundingClientRect().width; // Get current dpr
+      const canvasCssWidth = el.base.width / dpr;
+      const canvasCssHeight = el.base.height / dpr;
+
+      // Minimum panX: Canvas left edge should not go past sidebar right edge
+      // Max panX: Canvas right edge should not go past screen right edge
+      const minPanX = SIDEBAR_WIDTH;
+      const maxPanX = window.innerWidth - (canvasCssWidth * state.scale);
+
+      // Minimum panY: Canvas top edge should not go past top nav bottom edge
+      // Max panY: Canvas bottom edge should not go past screen bottom edge
+      const minPanY = TOP_NAV_HEIGHT;
+      const maxPanY = window.innerHeight - (canvasCssHeight * state.scale);
+
+      // Apply boundaries
+      state.panX = Math.max(minPanX, Math.min(newPanX, maxPanX));
+      state.panY = Math.max(minPanY, Math.min(newPanY, maxPanY));
+
       applyViewTransform();
       return;
     }
