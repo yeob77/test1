@@ -38,9 +38,6 @@ export const state = {
   pattern: 'none',
   bucketPattern: true,
   currentBaseImage: null,
-  // scale: 1, // Managed by viewportFix
-  // panX: 0, // Managed by viewportFix
-  // panY: 0, // Managed by viewportFix
   undo: [],
   redo: [],
   maxUndo: 25,
@@ -95,6 +92,7 @@ function showView(viewId) {
     el.navDrawingBtn.classList.add('active');
     requestAnimationFrame(() => {
       resizeCanvases();
+      render(); // Render after resize
     });
   } else if (viewId === 'settingsView') {
     el.navSettingsBtn.classList.add('active');
@@ -118,13 +116,10 @@ function attachPointer() {
       return;
     }
 
-    // const p = canvasPos(e); // Replaced by vp.toSceneFromEvent
     if (state.tool === 'pan') {
       panning = true;
       panStart.x = ('touches' in e ? e.touches[0].clientX : e.clientX);
       panStart.y = ('touches' in e ? e.touches[0].clientY : e.clientY);
-      // initialPan.x = state.panX; // Managed by viewportFix
-      // initialPan.y = state.panY; // Managed by viewportFix
       return;
     }
 
@@ -144,7 +139,7 @@ function attachPointer() {
       const r = el.base.getBoundingClientRect();
       const newTouchDistance = getTouchDistance(e.touches);
       const scaleFactor = newTouchDistance / lastTouchDistance;
-      const { scale, panX, panY } = vp.getState(); // Get current state from viewport
+      const { scale } = vp.getState(); // Get current scale from viewport
       const newScale = Math.max(0.2, Math.min(scale * scaleFactor, 10));
       
       const currentPinchCenter = getTouchCenter(e.touches, r);
@@ -153,10 +148,10 @@ function attachPointer() {
 
       // Update viewport scale and pan
       vp.setZoom(newScale, pcX, pcY); // Use viewportFix for zoom
+      render(); // Render after zoom/pan change
 
       lastTouchDistance = newTouchDistance;
       pinchCenter = currentPinchCenter;
-      // applyViewTransform(); // Replaced by vp.applyTransform in render loop
       return;
     }
 
@@ -210,8 +205,7 @@ function attachPointer() {
 
       // Apply boundaries using vp.setPan
       vp.setPan(Math.max(minBoundX, Math.min(newPanX, maxBoundX)), Math.max(minBoundY, Math.min(newPanY, maxBoundY)));
-
-      // applyViewTransform(); // Replaced by vp.applyTransform in render loop
+      render(); // Render after pan change
       return;
     }
 
@@ -240,7 +234,7 @@ function attachPointer() {
     const newScale = Math.max(0.2, Math.min(scale * (e.deltaY < 0 ? 1.1 : 1 / 1.1), 10));
 
     vp.setZoom(newScale, mouseX, mouseY); // Use viewportFix for zoom
-    // applyViewTransform(); // Replaced by vp.applyTransform in render loop
+    render(); // Render after zoom change
   }
 
   el.paint.addEventListener('mousedown', onPointerDown);
@@ -462,6 +456,7 @@ el.zoomOutBtn.onclick = () => {
 el.resetViewBtn.onclick = () => {
   vp.setZoom(1, 0, 0); // Reset zoom to 1
   vp.setPan(0, 0); // Reset pan to 0
+  render(); // Render after reset
 };
 
 el.clearPaintBtn.onclick = () => { 
@@ -914,6 +909,7 @@ async function boot() {
   };
 
   await renderTemplateGallery();
+  render(); // Initial render after templates are loaded
 
   showView(state.currentView);
 

@@ -22,7 +22,7 @@ export function initCanvas() {
 
 export function redrawPaintCanvas() {
   pctx.save();
-  vp.resetTransform(); // Reset transform before clearing
+  pctx.setTransform(1, 0, 0, 1, 0, 0); // Always reset to identity matrix before drawing
   pctx.clearRect(0, 0, el.paint.width, el.paint.height);
   vp.applyTransform(); // Apply viewport transform
 
@@ -33,9 +33,14 @@ export function redrawPaintCanvas() {
   pctx.restore();
 }
 
+export function render() {
+  redrawBaseCanvas();
+  redrawPaintCanvas();
+}
+
 export function redrawBaseCanvas() {
   bctx.save();
-  vp.resetTransform(); // Reset transform before clearing
+  bctx.setTransform(1, 0, 0, 1, 0, 0); // Always reset to identity matrix before drawing
   bctx.clearRect(0, 0, el.base.width, el.base.height);
   bctx.fillStyle = '#fff';
   bctx.fillRect(0, 0, el.base.width, el.base.height);
@@ -54,7 +59,7 @@ export function redrawBaseCanvas() {
   } else {
     drawBaseContent(); // Call drawBaseContent here
   }
-  bctx.restore();
+  bctx.restore(); // Restore transform after drawing base content
 }
 
 export function resizeCanvases() {
@@ -74,12 +79,12 @@ export function resizeCanvases() {
 export function importTemplate(img, clearPaint) {
   state.currentBaseImage = img;
   state.template = 'custom';
-  redrawBaseCanvas();
-
+  
   if (clearPaint) {
     pctx.clearRect(0, 0, el.paint.width, el.paint.height);
     snapshot();
   }
+  render(); // Call render to redraw both canvases
 }
 
 function snapshot() {
@@ -107,7 +112,7 @@ export function undo() {
   if (state.undo.length <= 1) return;
   const lastState = state.undo.pop();
   state.redo.push(lastState);
-  redrawPaintCanvas();
+  render(); // Call render to redraw both canvases
   showToast('되돌리기', 'info');
 }
 
@@ -115,7 +120,7 @@ export function redo() {
   if (!state.redo.length) return;
   const nextState = state.redo.pop();
   state.undo.push(nextState);
-  redrawPaintCanvas();
+  render(); // Call render to redraw both canvases
   showToast('다시하기', 'info');
 }
 
