@@ -1,5 +1,5 @@
 import { openColoringDB, addTemplateToDB, getTemplatesFromDB, deleteTemplateFromDB, updateTemplateCategoryInDB, getCategoriesFromDB } from './db.js';
-import { initCanvas, resizeCanvases, undo, redo, applyViewTransform, importTemplate, bucketFill, beginStroke, endStroke, strokeTo, canvasPos, getTouchDistance, getTouchCenter, redrawBaseCanvas } from './canvas.js';
+import { initCanvas, resizeCanvases, undo, redo, importTemplate, bucketFill, beginStroke, endStroke, strokeTo, getTouchDistance, getTouchCenter, redrawBaseCanvas, vp } from './canvas.js';
 
 const TEMPLATES_PER_PAGE = 12; // Number of templates to display per page
 
@@ -38,9 +38,9 @@ export const state = {
   pattern: 'none',
   bucketPattern: true,
   currentBaseImage: null,
-  scale: 1,
-  panX: 0,
-  panY: 0,
+  // scale: 1, // Managed by viewportFix
+  // panX: 0, // Managed by viewportFix
+  // panY: 0, // Managed by viewportFix
   undo: [],
   redo: [],
   maxUndo: 25,
@@ -105,7 +105,7 @@ function attachPointer() {
   let panning = false;
   let drawing = false;
   let panStart = { x: 0, y: 0 };
-  let initialPan = { x: 0, y: 0 };
+  // let initialPan = { x: 0, y: 0 }; // Managed by viewportFix
   let lastTouchDistance = 0;
   let pinchCenter = { x: 0, y: 0 };
 
@@ -118,20 +118,22 @@ function attachPointer() {
       return;
     }
 
-    const p = canvasPos(e);
+    // const p = canvasPos(e); // Replaced by vp.toSceneFromEvent
     if (state.tool === 'pan') {
       panning = true;
       panStart.x = ('touches' in e ? e.touches[0].clientX : e.clientX);
       panStart.y = ('touches' in e ? e.touches[0].clientY : e.clientY);
-      initialPan.x = state.panX;
-      initialPan.y = state.panY;
+      // initialPan.x = state.panX; // Managed by viewportFix
+      // initialPan.y = state.panY; // Managed by viewportFix
       return;
     }
 
     if (state.tool === 'bucket') {
+      const p = vp.toSceneFromEvent(e); // Get scene coordinates
       bucketFill(p.x | 0, p.y | 0);
     } else {
       drawing = true;
+      const p = vp.toSceneFromEvent(e); // Get scene coordinates
       beginStroke(p.x, p.y);
     }
   }
@@ -142,25 +144,19 @@ function attachPointer() {
       const r = el.base.getBoundingClientRect();
       const newTouchDistance = getTouchDistance(e.touches);
       const scaleFactor = newTouchDistance / lastTouchDistance;
-      const newScale = Math.max(0.2, Math.min(state.scale * scaleFactor, 10));
+      const { scale, panX, panY } = vp.getState(); // Get current state from viewport
+      const newScale = Math.max(0.2, Math.min(scale * scaleFactor, 10));
       
       const currentPinchCenter = getTouchCenter(e.touches, r);
       const pcX = currentPinchCenter.x;
       const pcY = currentPinchCenter.y;
 
-      const newPanX = pcX * (1 - newScale / state.scale) + state.panX * (newScale / state.scale);
-      const newPanY = pcY * (1 - newScale / state.scale) + state.panY * (newScale / state.scale);
-
-      const deltaX = (currentPinchCenter.x - pinchCenter.x);
-      const deltaY = (currentPinchCenter.y - pinchCenter.y);
-
-      state.panX = newPanX + deltaX;
-      state.panY = newPanY + deltaY;
-      state.scale = newScale;
+      // Update viewport scale and pan
+      vp.setZoom(newScale, pcX, pcY); // Use viewportFix for zoom
 
       lastTouchDistance = newTouchDistance;
       pinchCenter = currentPinchCenter;
-      applyViewTransform();
+      // applyViewTransform(); // Replaced by vp.applyTransform in render loop
       return;
     }
 
@@ -169,8 +165,9 @@ function attachPointer() {
       const dx = ('touches' in e ? e.touches[0].clientX : e.clientX) - panStart.x;
       const dy = ('touches' in e ? e.touches[0].clientY : e.clientY) - panStart.y;
       
-      let newPanX = initialPan.x + dx;
-      let newPanY = initialPan.y + dy;
+      const { panX, panY, scale } = vp.getState(); // Get current pan from viewport
+      let newPanX = panX + dx; // Calculate new pan based on current pan
+      let newPanY = panY + dy;
 
       // Calculate boundaries
       const SIDEBAR_WIDTH = 280; // From style.css
@@ -180,48 +177,47 @@ function attachPointer() {
       const canvasCssHeight = el.base.height / dpr;
 
       // Calculate effective canvas width/height after scaling
-      const effectiveCanvasWidth = canvasCssWidth * state.scale;
-      const effectiveCanvasHeight = canvasCssHeight * state.scale;
+      const effectiveCanvasWidth = canvasCssWidth * scale;
+      const effectiveCanvasHeight = canvasCssHeight * scale;
 
       // Available drawing area width and height (excluding sidebar and top nav)
       const availableWidth = window.innerWidth - SIDEBAR_WIDTH;
       const availableHeight = window.innerHeight - TOP_NAV_HEIGHT;
 
-      let minPanX, maxPanX, minPanY, maxPanY;
+      let minBoundX, maxBoundX, minBoundY, maxBoundY;
 
       // Horizontal boundaries
       if (effectiveCanvasWidth <= availableWidth) {
         // Canvas is smaller than or equal to available width, center it horizontally
-        minPanX = (availableWidth - effectiveCanvasWidth) / 2 + SIDEBAR_WIDTH;
-        maxPanX = minPanX; // No panning needed, fixed position
+        minBoundX = (availableWidth - effectiveCanvasWidth) / 2 + SIDEBAR_WIDTH;
+        maxBoundX = minBoundX; // No panning needed, fixed position
       } else {
         // Canvas is larger than available width, allow panning
-        minPanX = availableWidth - effectiveCanvasWidth + SIDEBAR_WIDTH; // Canvas right edge aligns with screen right edge
-        maxPanX = SIDEBAR_WIDTH; // Canvas left edge aligns with sidebar right edge
+        minBoundX = availableWidth - effectiveCanvasWidth + SIDEBAR_WIDTH; // Canvas right edge aligns with screen right edge
+        maxBoundX = SIDEBAR_WIDTH; // Canvas left edge aligns with sidebar right edge
       }
 
       // Vertical boundaries
       if (effectiveCanvasHeight <= availableHeight) {
         // Canvas is smaller than or equal to available height, center it vertically
-        minPanY = (availableHeight - effectiveCanvasHeight) / 2 + TOP_NAV_HEIGHT;
-        maxPanY = minPanY; // No panning needed, fixed position
+        minBoundY = (availableHeight - effectiveCanvasHeight) / 2 + TOP_NAV_HEIGHT;
+        maxBoundY = minBoundY; // No panning needed, fixed position
       } else {
         // Canvas is larger than available height, allow panning
-        minPanY = availableHeight - effectiveCanvasHeight + TOP_NAV_HEIGHT; // Canvas bottom edge aligns with screen bottom edge
-        maxPanY = TOP_NAV_HEIGHT; // Canvas top edge aligns with top nav bottom edge
+        minBoundY = availableHeight - effectiveCanvasHeight + TOP_NAV_HEIGHT; // Canvas bottom edge aligns with screen bottom edge
+        maxBoundY = TOP_NAV_HEIGHT; // Canvas top edge aligns with top nav bottom edge
       }
 
-      // Apply boundaries
-      state.panX = Math.max(minPanX, Math.min(newPanX, maxPanX));
-      state.panY = Math.max(minPanY, Math.min(newPanY, maxPanY));
+      // Apply boundaries using vp.setPan
+      vp.setPan(Math.max(minBoundX, Math.min(newPanX, maxBoundX)), Math.max(minBoundY, Math.min(newPanY, maxBoundY)));
 
-      applyViewTransform();
+      // applyViewTransform(); // Replaced by vp.applyTransform in render loop
       return;
     }
 
     if (!drawing) return;
     e.preventDefault();
-    const p = canvasPos(e);
+    const p = vp.toSceneFromEvent(e); // Get scene coordinates
     strokeTo(p.x, p.y);
   }
 
@@ -240,17 +236,11 @@ function attachPointer() {
     const mouseX = (e.clientX - r.left);
     const mouseY = (e.clientY - r.top);
 
-    const scaleAmount = e.deltaY < 0 ? 1.1 : 1 / 1.1;
-    const newScale = Math.max(0.2, Math.min(state.scale * scaleAmount, 10));
+    const { scale } = vp.getState(); // Get current scale from viewport
+    const newScale = Math.max(0.2, Math.min(scale * (e.deltaY < 0 ? 1.1 : 1 / 1.1), 10));
 
-    const dx = (mouseX - state.panX) * (newScale / state.scale - 1);
-    const dy = (mouseY - state.panY) * (newScale / state.scale - 1);
-
-    state.panX -= dx;
-    state.panY -= dy;
-    state.scale = newScale;
-
-    applyViewTransform();
+    vp.setZoom(newScale, mouseX, mouseY); // Use viewportFix for zoom
+    // applyViewTransform(); // Replaced by vp.applyTransform in render loop
   }
 
   el.paint.addEventListener('mousedown', onPointerDown);
@@ -454,32 +444,24 @@ el.zoomInBtn.onclick = () => {
   const dpr = el.paint.width / r.width;
   const centerX = r.width / 2 * dpr;
   const centerY = r.height / 2 * dpr;
-  const newScale = Math.min(10, state.scale * 1.2);
-  const dx = (centerX - state.panX) * (newScale / state.scale - 1);
-  const dy = (centerY - state.panY) * (newScale / state.scale - 1);
-  state.panX -= dx;
-  state.panY -= dy;
-  state.scale = newScale;
-  applyViewTransform();
+  const { scale } = vp.getState(); // Get current scale from viewport
+  const newScale = Math.min(10, scale * 1.2);
+  
+  vp.setZoom(newScale, centerX, centerY); // Use viewportFix for zoom
 };
 el.zoomOutBtn.onclick = () => {
   const r = el.base.getBoundingClientRect();
   const dpr = el.paint.width / r.width;
   const centerX = r.width / 2 * dpr;
   const centerY = r.height / 2 * dpr;
-  const newScale = Math.max(0.2, state.scale / 1.2);
-  const dx = (centerX - state.panX) * (newScale / state.scale - 1);
-  const dy = (centerY - state.panY) * (newScale / state.scale - 1);
-  state.panX -= dx;
-  state.panY -= dy;
-  state.scale = newScale;
-  applyViewTransform();
+  const { scale } = vp.getState(); // Get current scale from viewport
+  const newScale = Math.max(0.2, scale / 1.2);
+  
+  vp.setZoom(newScale, centerX, centerY); // Use viewportFix for zoom
 };
 el.resetViewBtn.onclick = () => {
-  state.scale = 1;
-  state.panX = 0;
-  state.panY = 0;
-  applyViewTransform();
+  vp.setZoom(1, 0, 0); // Reset zoom to 1
+  vp.setPan(0, 0); // Reset pan to 0
 };
 
 el.clearPaintBtn.onclick = () => { 
@@ -744,8 +726,14 @@ function showModal(imageUrl, templateName, currentCategory) { // Add templateNam
   async function populateModalCategories() {
     modalCategorySelect.innerHTML = '';
     const allCategories = await getCategoriesFromDB();
-    const predefinedCategories = TEMPLATE_CATEGORIES.filter(cat => cat.id !== 'all'); // Exclude 'all'
-
+    const predefinedCategories = [
+      { id: 'uncategorized', label: '미분류' },
+      { id: 'animals', label: '동물' },
+      { id: 'nature', label: '자연', icon: '🌳' },
+      { id: 'objects', label: '사물', icon: '💡' },
+      { id: 'abstract', label: '추상', icon: '🌀' }
+    ];
+    
     // Add predefined categories
     predefinedCategories.forEach(cat => {
       const option = document.createElement('option');

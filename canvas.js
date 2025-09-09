@@ -1,4 +1,5 @@
 import { state, el, showToast } from './ui.js';
+import { createViewport } from './viewportFix.js';
 
 let drawing = false;
 let panning = false;
@@ -7,29 +8,23 @@ let lastY = 0;
 
 let pctx;
 let bctx;
+let vp; // Declare viewport instance
 
 export function initCanvas() {
   pctx = el.paint.getContext('2d', { willReadFrequently: true });
   bctx = el.base.getContext('2d', { willReadFrequently: true });
+  vp = createViewport(el.paint, pctx, { initialScale: 1 }); // Initialize viewport for paint canvas
+  // We might need another viewport for base canvas if it also needs panning/zooming independently
+  // For now, let's assume base canvas is drawn relative to paint canvas's viewport
 }
 
-export function applyViewTransform() {
-  const cssPanX = state.panX;
-  const cssPanY = state.panY;
-  const transform = `translate(${cssPanX}px, ${cssPanY}px) scale(${state.scale})`;
-  [el.base, el.paint].forEach(cv => {
-    cv.style.transformOrigin = '0 0';
-    cv.style.transform = transform;
-  });
-}
+
 
 export function redrawPaintCanvas() {
   pctx.save();
-  pctx.setTransform(1, 0, 0, 1, 0, 0);
+  vp.resetTransform(); // Reset transform before clearing
   pctx.clearRect(0, 0, el.paint.width, el.paint.height);
-  // Apply pan values scaled by the current scale
-  pctx.translate(state.panX / state.scale, state.panY / state.scale);
-  pctx.scale(state.scale, state.scale);
+  vp.applyTransform(); // Apply viewport transform
 
   const lastSnapshot = state.undo[state.undo.length - 1];
   if (lastSnapshot) {
@@ -40,10 +35,11 @@ export function redrawPaintCanvas() {
 
 export function redrawBaseCanvas() {
   bctx.save();
-  bctx.setTransform(1, 0, 0, 1, 0, 0);
+  vp.resetTransform(); // Reset transform before clearing
   bctx.clearRect(0, 0, el.base.width, el.base.height);
   bctx.fillStyle = '#fff';
   bctx.fillRect(0, 0, el.base.width, el.base.height);
+  vp.applyTransform(); // Apply viewport transform
 
   if (state.currentBaseImage) {
     const img = state.currentBaseImage;
@@ -62,32 +58,15 @@ export function redrawBaseCanvas() {
 }
 
 export function resizeCanvases() {
-  const dpr = Math.max(1, window.devicePixelRatio || 1);
-  const box = el.base.parentElement.getBoundingClientRect();
-  const cssW = box.width;
-  const cssH = box.height;
-  [el.base, el.paint].forEach(cv => {
-    cv.style.width = cssW + 'px';
-    cv.style.height = cssH + 'px';
-    cv.width = Math.round(cssW * dpr);
-    cv.height = Math.round(cssH * dpr);
-  });
-
-  state.scale = 1;
-  state.panX = 0;
-  state.panY = 0;
-  applyViewTransform();
-
+  vp.resizeToCss(); // Let viewportFix handle canvas resizing and initial transform
+  
+  // Reset undo/redo history on resize
   state.undo = [];
   state.redo = [];
 
-  redrawBaseCanvas();
-
-  pctx.save();
-  pctx.setTransform(1, 0, 0, 1, 0, 0);
-  pctx.clearRect(0, 0, el.paint.width, el.paint.height);
-  pctx.restore();
-  snapshot();
+  redrawBaseCanvas(); // Redraw base content after resize
+  redrawPaintCanvas(); // Redraw paint content after resize
+  snapshot(); // Take a new snapshot after resize
 }
 
 
@@ -111,7 +90,9 @@ function snapshot() {
       console.warn("Snapshot skipped: Canvas has zero width or height.");
       return;
     }
+    vp.resetTransform(); // Reset transform before getting image data
     const img = pctx.getImageData(0, 0, W, H);
+    vp.applyTransform(); // Re-apply transform after getting image data
     state.undo.push(img);
     if (state.undo.length > state.maxUndo) {
       state.undo.shift();
@@ -138,22 +119,7 @@ export function redo() {
   showToast('다시하기', 'info');
 }
 
-export function canvasPos(e) {
-  const r = el.base.getBoundingClientRect();
-  const dpr = el.paint.width / r.width;
 
-  const screenX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-  const screenY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-
-  const cssX = screenX - r.left;
-  const cssY = screenY - r.top;
-
-  // Corrected calculation for logical CSS coordinates
-  const logicalCssX = (cssX / state.scale) - (state.panX / state.scale);
-  const logicalCssY = (cssY / state.scale) - (state.panY / state.scale);
-
-  return { x: logicalCssX * dpr, y: logicalCssY * dpr };
-}
 
 export function getTouchDistance(touches) {
   const dx = touches[0].clientX - touches[1].clientX;
@@ -248,6 +214,7 @@ export function beginStroke(x, y) {
   drawing = true;
   lastX = x; lastY = y;
   pctx.save();
+  vp.applyTransform(); // Apply viewport transform before drawing
   pctx.beginPath(); pctx.moveTo(x, y);
   pctx.lineCap = 'round'; pctx.lineJoin = 'round';
 
@@ -264,11 +231,13 @@ export function endStroke() {
   if (!drawing) return;
   drawing = false;
   pctx.restore();
+  vp.resetTransform(); // Reset transform after drawing
   snapshot();
 }
 
 export function strokeTo(x, y) {
   if (!drawing) return;
+  const { scale } = vp.getState(); // Get current scale from viewport
   const dpr = el.paint.width / el.paint.getBoundingClientRect().width;
   const dx = x - lastX, dy = y - lastY;
   const dist = Math.hypot(dx, dy);
@@ -276,7 +245,7 @@ export function strokeTo(x, y) {
   const usePat = state.pattern !== 'none';
   const strokeStyle = usePat ? ensurePattern() : state.color;
   const fillStyle = strokeStyle;
-  pctx.lineWidth = state.size * dpr;
+  pctx.lineWidth = state.size * dpr / scale; // Adjust line width by scale
 
   if (state.tool === 'eraser') {
     pctx.globalAlpha = 1;
@@ -292,7 +261,7 @@ export function strokeTo(x, y) {
     case 'marker':
       pctx.save();
       pctx.strokeStyle = strokeStyle;
-      pctx.lineWidth = state.size * dpr * 1.2;
+      pctx.lineWidth = state.size * dpr * 1.2 / scale; // Adjust line width by scale
       pctx.lineTo(x, y); pctx.restore();
       break;
     case 'calligraphy':
@@ -300,9 +269,10 @@ export function strokeTo(x, y) {
         const px = lastX + dx * (i / dist), py = lastY + dy * (i / dist);
         pctx.save();
         const ang = Math.atan2(dy, dx) - Math.PI / 6;
-        pctx.translate(px, py); pctx.rotate(ang);
+        // pctx.translate(px, py); // Removed, viewport handles transform
+        // pctx.rotate(ang); // Removed, viewport handles transform
         pctx.beginPath(); pctx.fillStyle = fillStyle;
-        pctx.ellipse(0, 0, state.size * dpr * 0.8, state.size * dpr * 0.35, 0, 0, Math.PI * 2);
+        pctx.ellipse(px, py, state.size * dpr * 0.8 / scale, state.size * dpr * 0.35 / scale, ang, 0, Math.PI * 2); // Adjust ellipse size by scale
         pctx.fill(); pctx.restore();
       }
       break;
@@ -310,12 +280,12 @@ export function strokeTo(x, y) {
       for (let i = 0; i <= dist; i += step) {
         const px = lastX + dx * (i / dist), py = lastY + dy * (i / dist);
         for (let k = 0; k < 6; k++) {
-          const jx = (Math.random() - 0.5) * state.size * dpr * 0.4;
-          const jy = (Math.random() - 0.5) * state.size * dpr * 0.4;
+          const jx = (Math.random() - 0.5) * state.size * dpr * 0.4 / scale; // Adjust jitter by scale
+          const jy = (Math.random() - 0.5) * state.size * dpr * 0.4 / scale; // Adjust jitter by scale
           pctx.save();
           pctx.fillStyle = fillStyle;
           pctx.beginPath();
-          pctx.arc(px + jx, py + jy, Math.max(1, state.size * dpr * 0.12), 0, Math.PI * 2);
+          pctx.arc(px + jx, py + jy, Math.max(1, state.size * dpr * 0.12 / scale), 0, Math.PI * 2); // Adjust arc size by scale
           pctx.fill(); pctx.restore();
         }
       }
@@ -324,10 +294,10 @@ export function strokeTo(x, y) {
       for (let i = 0; i <= dist; i += step) {
         const px = lastX + dx * (i / dist), py = lastY + dy * (i / dist);
         pctx.save(); pctx.fillStyle = fillStyle;
-        pctx.shadowBlur = Math.max(6, state.size * dpr);
+        pctx.shadowBlur = Math.max(6, state.size * dpr / scale); // Adjust shadow blur by scale
         pctx.shadowColor = state.color;
         pctx.beginPath();
-        pctx.arc(px, py, state.size * dpr * 0.45, 0, Math.PI * 2);
+        pctx.arc(px, py, state.size * dpr * 0.45 / scale, 0, Math.PI * 2); // Adjust arc size by scale
         pctx.fill(); pctx.restore();
       }
       break;
@@ -351,8 +321,13 @@ export function bucketFill(sx, sy) {
   const tmp = document.createElement('canvas');
   tmp.width = W; tmp.height = H;
   const t = tmp.getContext('2d');
+  
+  // Apply viewport transform to temporary canvas for accurate drawing
+  vp.resetTransform(); // Ensure temporary canvas is untransformed for drawing base/paint
   t.drawImage(el.base, 0, 0, W, H);
   t.drawImage(el.paint, 0, 0, W, H);
+  vp.applyTransform(); // Restore viewport transform
+
   const flat = t.getImageData(0, 0, W, H);
   const fd = flat.data;
   const i0 = (sy * W + sx) * 4;
@@ -394,7 +369,9 @@ export function bucketFill(sx, sy) {
       pdat[j] = R; pdat[j + 1] = G; pdat[j + 2] = B; pdat[j + 3] = 255;
     }
   }
+  vp.resetTransform(); // Reset transform before putting image data
   pctx.putImageData(pd, 0, 0);
+  vp.applyTransform(); // Re-apply transform after putting image data
   snapshot();
 }
 
@@ -403,10 +380,14 @@ function drawBaseContent() {
   const H = el.base.height;
   const dpr = el.paint.width / el.base.getBoundingClientRect().width;
   bctx.strokeStyle = '#000';
-  bctx.lineWidth = 4 * dpr;
+  bctx.lineWidth = 4 * dpr / vp.getState().scale; // Adjust line width by scale
   bctx.lineCap = 'round';
   bctx.lineJoin = 'round';
   const name = state.template;
+
+  bctx.save();
+  vp.applyTransform(); // Apply viewport transform before drawing base content
+
   if (name === 'flower') {
     bctx.beginPath();
     bctx.arc(W * 0.5, H * 0.5, Math.min(W, H) * 0.09, 0, Math.PI * 2);
@@ -454,4 +435,5 @@ function drawBaseContent() {
     bctx.arc(rx - rw * 0.5, ry - rh * 0.25, rh * 0.12, 0, Math.PI * 2);
     bctx.stroke();
   }
+  bctx.restore(); // Restore transform after drawing base content
 }
