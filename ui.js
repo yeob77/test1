@@ -1,5 +1,5 @@
 import { openColoringDB, addTemplateToDB, getTemplatesFromDB, deleteTemplateFromDB, updateTemplateCategoryInDB, getCategoriesFromDB } from './db.js';
-import { initCanvas, resizeCanvases, undo, redo, importTemplate, bucketFill, beginStroke, endStroke, strokeTo, getTouchDistance, getTouchCenter, redrawBaseCanvas, vp } from './canvas.js';
+import { initCanvas, resizeCanvases, undo, redo, importTemplate, bucketFill, beginStroke, endStroke, strokeTo, getTouchDistance, getTouchCenter, redrawBaseCanvas, vp, render } from './canvas.js';
 
 const TEMPLATES_PER_PAGE = 12; // Number of templates to display per page
 
