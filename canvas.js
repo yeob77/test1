@@ -8,7 +8,7 @@ let lastY = 0;
 
 let pctx;
 let bctx;
-let vp; // Declare viewport instance
+export let vp; // Declare and export viewport instance
 
 export function initCanvas() {
   pctx = el.paint.getContext('2d', { willReadFrequently: true });
